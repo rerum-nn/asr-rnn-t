@@ -3,6 +3,7 @@ from abc import abstractmethod
 import torch
 from numpy import inf
 from torch.nn.utils import clip_grad_norm_
+from torch.profiler import profile, record_function, ProfilerActivity
 from tqdm.auto import tqdm
 
 from src.datasets.data_utils import inf_loop
@@ -137,6 +138,18 @@ class BaseTrainer:
         self.checkpoint_dir = (
             ROOT_PATH / config.trainer.save_dir / config.writer.run_name
         )
+        
+        self.profiler = None
+        self.enable_profiler = config.trainer.get("enable_profiler", False)
+        if self.enable_profiler:
+            self.profiler = profile(
+                activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA] if torch.cuda.is_available() else [ProfilerActivity.CPU],
+                schedule=torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=2),
+                on_trace_ready=torch.profiler.tensorboard_trace_handler(str(self.checkpoint_dir / "profiler_logs")),
+                record_shapes=True,
+                profile_memory=True,
+                with_stack=True
+            )
 
         if config.trainer.get("resume_from") is not None:
             resume_path = self.checkpoint_dir / config.trainer.resume_from
@@ -205,6 +218,10 @@ class BaseTrainer:
         self.train_metrics.reset()
         self.writer.set_step((epoch - 1) * self.epoch_len)
         self.writer.add_scalar("epoch", epoch)
+        
+        if self.enable_profiler and self.profiler is not None:
+            self.profiler.start()
+            
         for batch_idx, batch in enumerate(
             tqdm(self.train_dataloader, desc="train", total=self.epoch_len)
         ):
@@ -213,6 +230,10 @@ class BaseTrainer:
                     batch,
                     metrics=self.train_metrics,
                 )
+                
+                if self.enable_profiler and self.profiler is not None:
+                    self.profiler.step()
+                    
             except torch.cuda.OutOfMemoryError as e:
                 if self.skip_oom:
                     self.logger.warning("OOM on batch. Skipping batch.")
@@ -242,6 +263,9 @@ class BaseTrainer:
                 self.train_metrics.reset()
             if batch_idx + 1 >= self.epoch_len:
                 break
+
+        if self.enable_profiler and self.profiler is not None:
+            self.profiler.stop()
 
         logs = last_train_metrics
 
