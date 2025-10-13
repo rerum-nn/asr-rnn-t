@@ -22,7 +22,7 @@ text_encoder:
   _target_: src.text_encoder.RNNTTextEncoder
 trainer:
   log_step: 50
-  n_epochs: 50
+  n_epochs: 100
   epoch_len: 2000
   enable_profiler: False
   device_tensors: ["x", "text_encoded", "spectrogram_length", "text_encoded_length"] # which tensors should be on device (ex. GPU)

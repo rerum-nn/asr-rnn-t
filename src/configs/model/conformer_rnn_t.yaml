@@ -1,13 +1,14 @@
 _target_: src.model.conformer_rnn_t.ConformerRNNT
 max_length: 700
 input_dim: 80
-subsampling_dim: 144
+subsampling_dim: 256
 pad_idx: 0
 bos_idx: 1
 encoder_dim: 144
 encoder_layers: 16
 attention_heads: 4
 conv_kernel_size: 9
-hidden_dim: 256
+hidden_dim: 320
 max_tokens: 3
 dropout_rate: 0.1
+lstm_dropout_rate: 0.3

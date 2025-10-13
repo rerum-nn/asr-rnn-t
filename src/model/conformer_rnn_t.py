@@ -20,7 +20,8 @@ class ConformerRNNT(nn.Module):
             conv_kernel_size=31, 
             hidden_dim=128,
             max_tokens=3,
-            dropout_rate=0.1
+            dropout_rate=0.1,
+            lstm_dropout_rate=0.3
         ):
         super().__init__()
 
@@ -29,8 +30,24 @@ class ConformerRNNT(nn.Module):
         self.bos_idx = bos_idx
         self.pad_idx = pad_idx
 
-        self.conformer = Conformer(max_length, input_dim, hidden_dim, encoder_dim, subsampling_dim, encoder_layers, attention_heads, conv_kernel_size, dropout_rate)
-        self.prediction_network = PredictionNetwork(encoder_dim, hidden_dim, hidden_dim, self.vocab_size, pad_idx)
+        self.conformer = Conformer(
+            max_length=max_length,
+            input_dim=input_dim, 
+            output_dim=hidden_dim, 
+            encoder_dim=encoder_dim, 
+            subsampling_dim=subsampling_dim, 
+            encoder_layers=encoder_layers, 
+            attention_heads=attention_heads, 
+            conv_kernel_size=conv_kernel_size, 
+            dropout_rate=dropout_rate
+        )
+        self.prediction_network = PredictionNetwork(
+            hidden_dim=hidden_dim, 
+            output_dim=hidden_dim, 
+            vocab_size=self.vocab_size, 
+            pad_idx=pad_idx, 
+            dropout_rate=lstm_dropout_rate
+        )
         self.joint_network = JointNetwork(hidden_dim, self.vocab_size)
 
     def forward(self, x, text_encoded, spectrogram_length, **kwargs):

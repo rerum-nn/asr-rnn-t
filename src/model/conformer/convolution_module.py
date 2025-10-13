@@ -14,7 +14,7 @@ class ConvolutionModule(nn.Module):
             nn.LayerNorm(encoder_dim),
             Transpose(-2, -1),
             nn.Conv1d(encoder_dim, encoder_dim * self.expansion_factor, kernel_size=1),
-            nn.GLU(dim=-2),
+            nn.GLU(dim=1),
             nn.Conv1d(encoder_dim, encoder_dim, kernel_size=kernel_size, padding = kernel_size // 2, groups=encoder_dim),
             nn.BatchNorm1d(encoder_dim),
             nn.SiLU(),

@@ -3,17 +3,17 @@ from torch import nn
 
 
 class PredictionNetwork(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, vocab_size, pad_idx):
+    def __init__(self, hidden_dim, output_dim, vocab_size, pad_idx, dropout_rate=0.1):
         super().__init__()
 
         self.vocab_size = vocab_size
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
 
-        self.embedding = nn.Embedding(vocab_size, input_dim, padding_idx=pad_idx)
+        self.embedding = nn.Embedding(vocab_size, hidden_dim, padding_idx=pad_idx)
 
-        self.input_layer_norm = nn.LayerNorm(input_dim)
-        self.hidden_activation = nn.LSTM(input_dim, hidden_dim, batch_first=True)
+        self.input_layer_norm = nn.LayerNorm(hidden_dim)
+        self.hidden_activation = nn.LSTM(hidden_dim, hidden_dim, batch_first=True, dropout=dropout_rate)
         self.hidden_output = nn.Linear(hidden_dim, output_dim)
         self.output_layer_norm = nn.LayerNorm(output_dim)
 

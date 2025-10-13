@@ -57,12 +57,13 @@ class RNNTTextEncoder:
 
     def rnnt_decode(self, inds) -> str:
         parsed_inds = []
-        i = 0
-        for row in inds:
-            if row[i] == len(self.vocab):
-                i += 1
-            else:
-                parsed_inds.append(row[i])
+        j = 0
+        for i in range(inds.shape[1]):
+            row = inds[:, i]
+            while j < len(row) and row[j] == len(self.vocab):
+                j += 1
+            if j < len(row):
+                parsed_inds.append(row[j])
         return self.decode(parsed_inds)
 
     @staticmethod
