@@ -85,12 +85,16 @@ class BaseDataset(Dataset):
         text_encoded = self.text_encoder.encode(text)
 
         if "audio" in self.instance_transforms:
-            audio = self.preprocess_audio(audio)
+            aug_audio = self.preprocess_audio(audio)
+        else:
+            aug_audio = audio
 
-        spectrogram = self.get_spectrogram(audio)
+        spectrogram = self.get_spectrogram(aug_audio)
 
         instance_data = {
+            "instance_audio": audio,
             "audio": audio,
+            "instance_spectrogram": spectrogram,
             "spectrogram": spectrogram,
             "text": text,
             "text_encoded": text_encoded,

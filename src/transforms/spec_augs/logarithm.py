@@ -6,5 +6,5 @@ class Logarithm(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, x):
+    def __call__(self, x):
         return torch.clamp(x, min=1e-9).log()

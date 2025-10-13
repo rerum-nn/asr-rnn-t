@@ -1,0 +1,72 @@
+train:
+  get_spectrogram: # special key for getting spectrogram
+    _target_: torchaudio.transforms.MelSpectrogram
+    sample_rate: 16000
+    n_fft: 400
+    hop_length: 160
+    n_mels: 80
+  audio:
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.NormalizeRMS
+      - _target_: src.transforms.GaussianNoise
+        max_std: 0.005
+        p: 0.7
+      - _target_: src.transforms.TimeStretch
+        min_time_stretch: 0.85
+        max_time_stretch: 1.15
+        p: 0.7
+      - _target_: src.transforms.PitchShift
+        min_semitones: -2
+        max_semitones: 2
+        p: 0.7
+      - _target_: src.transforms.Gain
+        min_gain_in_db: -1.2
+        max_gain_in_db: 1.2
+        p: 0.5
+  spectrogram:
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.Logarithm
+      - _target_: src.transforms.NormalizeSpec
+        params_path: normalization_params.json
+      - _target_: src.transforms.FrequencyMasking
+        frequency_mask_param: 7
+        p: 0.8
+      - _target_: src.transforms.FrequencyMasking
+        frequency_mask_param: 7
+        p: 0.5
+      - _target_: src.transforms.FrequencyMasking
+        frequency_mask_param: 7
+        p: 0.2
+      - _target_: src.transforms.TimeMasking
+        time_mask_param: 10
+        p: 0.8
+      - _target_: src.transforms.TimeMasking
+        time_mask_param: 10
+        p: 0.6
+      - _target_: src.transforms.TimeMasking
+        time_mask_param: 10
+        p: 0.4
+      - _target_: src.transforms.TimeMasking
+        time_mask_param: 10
+        p: 0.2
+
+
+inference:
+  get_spectrogram:
+    _target_: torchaudio.transforms.MelSpectrogram
+    sample_rate: 16000
+    n_fft: 400
+    hop_length: 160
+    n_mels: 80
+  audio:
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.NormalizeRMS
+  spectrogram:
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.Logarithm
+      - _target_: src.transforms.NormalizeSpec
+        params_path: normalization_params.json

@@ -36,7 +36,7 @@ class Trainer(BaseTrainer):
         """
         with record_function("move_batch_to_device"):
             batch = self.move_batch_to_device(batch)
-        
+
         with record_function("transform_batch"):
             batch = self.transform_batch(batch)  # transform batch on device -- faster
 
@@ -56,7 +56,7 @@ class Trainer(BaseTrainer):
         if self.is_train:
             with record_function("backward_pass"):
                 batch["loss"].backward()  # sum of all losses is always called loss
-            
+
             with record_function("optimizer_step"):
                 self._clip_grad_norm()
                 self.optimizer.step()
@@ -91,28 +91,26 @@ class Trainer(BaseTrainer):
         if mode == "train":  # the method is called only every self.log_step steps
             self.log_spectrogram(**batch)
             self.log_predictions(**batch)
-            self.log_augmented_spectrogram(**batch)
             self.log_audio(**batch)
         else:
             # Log Stuff
             self.log_spectrogram(**batch)
             self.log_predictions(**batch)
-            self.log_augmented_spectrogram(**batch)
             self.log_audio(**batch)
 
-    def log_audio(self, audio, **batch):
+    def log_audio(self, instance_audio, audio, **batch):
         audio_to_log = audio[0]
         self.writer.add_audio("audio", audio_to_log, sample_rate=16000)
+        audio_to_log = instance_audio[0]
+        self.writer.add_audio("instance_audio", audio_to_log, sample_rate=16000)
 
-    def log_spectrogram(self, spectrogram, **batch):
+    def log_spectrogram(self, instance_spectrogram, spectrogram, **batch):
         spectrogram_for_plot = spectrogram[0].detach().cpu()
         image = plot_spectrogram(spectrogram_for_plot)
         self.writer.add_image("spectrogram", image)
-
-    def log_augmented_spectrogram(self, x, **batch):
-        spectrogram_for_plot = x[0].detach().cpu().transpose(0, 1)
+        spectrogram_for_plot = instance_spectrogram[0].detach().cpu()
         image = plot_spectrogram(spectrogram_for_plot)
-        self.writer.add_image("augmented_spectrogram", image)
+        self.writer.add_image("instance_spectrogram", image)
 
     def log_predictions(
         self, text, log_probs, log_probs_length, audio_path, examples_to_log=10, **batch

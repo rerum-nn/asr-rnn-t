@@ -1,0 +1,4 @@
+defaults:
+  - batch_transforms: batch
+  - instance_transforms: normalization_and_augs
+  - _self_
