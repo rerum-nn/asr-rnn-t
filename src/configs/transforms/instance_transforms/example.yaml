@@ -21,3 +21,7 @@ inference:
     n_fft: 400
     hop_length: 160
     n_mels: 80
+  spectrogram:
+    _target_: torch.nn.Sequential
+    _args_:
+      - _target_: src.transforms.spec_augs.Logarithm

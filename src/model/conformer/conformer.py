@@ -31,13 +31,13 @@ class Conformer(nn.Module):
         self.conv_subsampling = nn.Sequential(
             nn.Conv2d(1, subsampling_dim, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
-            nn.Conv2d(subsampling_dim, subsampling_dim, kernel_size=3, stride=2, groups=subsampling_dim, padding=1),
+            nn.Conv2d(subsampling_dim, subsampling_dim, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
-            nn.Conv2d(subsampling_dim, subsampling_dim, kernel_size=3, stride=2, groups=subsampling_dim, padding=1),
-            nn.ReLU(),
+            # nn.Conv2d(subsampling_dim, subsampling_dim, kernel_size=3, stride=2, groups=subsampling_dim, padding=1),
+            # nn.ReLU(),
         )
         self.proj = nn.Sequential(
-            nn.Linear(subsampling_dim * ((input_dim + 7) // 8), encoder_dim),
+            nn.Linear(subsampling_dim * ((input_dim + 3) // 4), encoder_dim),
             nn.Dropout(dropout_rate)
         )
         
@@ -48,7 +48,7 @@ class Conformer(nn.Module):
 
     def forward(self, x, input_lengths):
         x = self.conv_subsampling(x.unsqueeze(1))
-        input_lengths = (input_lengths + 7) // 8
+        input_lengths = (input_lengths + 3) // 4
 
         x = x.permute(0, 2, 1, 3).contiguous().view(x.size(0), x.size(2), -1)
         x = self.proj(x)

@@ -11,8 +11,8 @@ optimizer:
   lr: 3e-4
 lr_scheduler:
   _target_: torch.optim.lr_scheduler.OneCycleLR
-  max_lr: 5e-3
-  pct_start: 0.15
+  max_lr: 0.0025
+  pct_start: 0.10
   steps_per_epoch: ${trainer.epoch_len}
   epochs: ${trainer.n_epochs}
   anneal_strategy: cos
