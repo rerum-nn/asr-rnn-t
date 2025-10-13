@@ -19,8 +19,8 @@ class PredictionNetwork(nn.Module):
 
     def forward(self, y, h=None, c=None):
         if h is None or c is None:
-            c = torch.zeros(1, y.size(0), self.hidden_dim)
-            h = torch.zeros(1, y.size(0), self.hidden_dim)
+            c = torch.zeros(1, y.size(0), self.hidden_dim, device=y.device)
+            h = torch.zeros(1, y.size(0), self.hidden_dim, device=y.device)
 
         y = self.embedding(y)
         y = self.input_layer_norm(y)

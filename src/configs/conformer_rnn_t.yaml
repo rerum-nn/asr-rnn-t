@@ -2,16 +2,16 @@ defaults:
   - model: conformer_rnn_t
   - writer: cometml
   - metrics: example
-  - datasets: onebatchtest
-  - dataloader: example
-  - transforms: example_only_instance
+  - datasets: train_clean
+  - dataloader: dataloader_gpu
+  - transforms: example
   - _self_
 optimizer:
   _target_: torch.optim.AdamW
   lr: 3e-4
 lr_scheduler:
   _target_: torch.optim.lr_scheduler.OneCycleLR
-  max_lr: 1e-2
+  max_lr: 5e-3
   pct_start: 0.15
   steps_per_epoch: ${trainer.epoch_len}
   epochs: ${trainer.n_epochs}
@@ -25,9 +25,9 @@ trainer:
   n_epochs: 50
   epoch_len: 2000
   enable_profiler: False
-  device_tensors: ["spectrogram", "text_encoded", "spectrogram_length", "text_encoded_length"] # which tensors should be on device (ex. GPU)
+  device_tensors: ["x", "text_encoded", "spectrogram_length", "text_encoded_length"] # which tensors should be on device (ex. GPU)
   resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
-  device: auto # device name or "auto"
+  device: cuda # device name or "auto"
   override: True # if True, will override the previous run with the same name
   monitor: "min val_WER_(Argmax)" # "off" or "max/min metric_name", i.e. our goal is to maximize/minimize metric
   save_period: 5 # checkpoint each save_period epochs in addition to the best epoch

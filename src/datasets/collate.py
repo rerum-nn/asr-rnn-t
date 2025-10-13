@@ -17,7 +17,8 @@ def collate_fn(dataset_items: list[dict]):
 
     result_batch = {}
 
-    result_batch["spectrogram"] = pad_sequence([item["spectrogram"][0].transpose(0, 1) for item in dataset_items], batch_first=True)
+    result_batch["spectrogram"] = [item['spectrogram'][0] for item in dataset_items]
+    result_batch["x"] = pad_sequence([item["spectrogram"][0].transpose(0, 1) for item in dataset_items], batch_first=True)
     result_batch["text_encoded"] = pad_sequence([item["text_encoded"][0] for item in dataset_items], batch_first=True).int()
     result_batch["text"] = [item["text"] for item in dataset_items]
     result_batch["audio"] = [item["audio"] for item in dataset_items]

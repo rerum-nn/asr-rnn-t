@@ -91,11 +91,13 @@ class Trainer(BaseTrainer):
         if mode == "train":  # the method is called only every self.log_step steps
             self.log_spectrogram(**batch)
             self.log_predictions(**batch)
+            self.log_augmented_spectrogram(**batch)
             self.log_audio(**batch)
         else:
             # Log Stuff
             self.log_spectrogram(**batch)
             self.log_predictions(**batch)
+            self.log_augmented_spectrogram(**batch)
             self.log_audio(**batch)
 
     def log_audio(self, audio, **batch):
@@ -107,6 +109,11 @@ class Trainer(BaseTrainer):
         image = plot_spectrogram(spectrogram_for_plot)
         self.writer.add_image("spectrogram", image)
 
+    def log_augmented_spectrogram(self, x, **batch):
+        spectrogram_for_plot = x[0].detach().cpu().transpose(0, 1)
+        image = plot_spectrogram(spectrogram_for_plot)
+        self.writer.add_image("augmented_spectrogram", image)
+
     def log_predictions(
         self, text, log_probs, log_probs_length, audio_path, examples_to_log=10, **batch
     ):
@@ -117,7 +124,7 @@ class Trainer(BaseTrainer):
         argmax_inds = log_probs.cpu().argmax(-1).numpy()
         argmax_inds = [
             inds[: int(ind_len)]
-            for inds, ind_len in zip(argmax_inds, log_probs_length.numpy())
+            for inds, ind_len in zip(argmax_inds, log_probs_length.cpu().numpy())
         ]
         argmax_texts = [self.text_encoder.rnnt_decode(inds) for inds in argmax_inds]
         tuples = list(zip(argmax_texts, text, audio_path))
@@ -133,6 +140,7 @@ class Trainer(BaseTrainer):
                 "predictions": pred,
                 "wer": wer,
                 "cer": cer,
+                "step": self.writer.step,
             }
         self.writer.add_table(
             "predictions", pd.DataFrame.from_dict(rows, orient="index")

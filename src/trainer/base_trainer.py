@@ -395,7 +395,7 @@ class BaseTrainer:
         transforms = self.batch_transforms.get(transform_type)
         if transforms is not None:
             for transform_name in transforms.keys():
-                batch[transform_name] = transforms[transform_name](
+                batch[transform_name] = transforms[transform_name].to(self.device)(
                     batch[transform_name]
                 )
         return batch

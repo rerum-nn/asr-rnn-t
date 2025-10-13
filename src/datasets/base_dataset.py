@@ -84,6 +84,9 @@ class BaseDataset(Dataset):
         text = data_dict["text"]
         text_encoded = self.text_encoder.encode(text)
 
+        if "audio" in self.instance_transforms:
+            audio = self.preprocess_audio(audio)
+
         spectrogram = self.get_spectrogram(audio)
 
         instance_data = {
@@ -126,6 +129,12 @@ class BaseDataset(Dataset):
             spectrogram (Tensor): spectrogram for the audio.
         """
         return self.instance_transforms["get_spectrogram"](audio)
+
+    def preprocess_audio(self, audio):
+        """
+        Preprocess audio with instance transforms.
+        """
+        return self.instance_transforms["audio"](audio)
 
     def preprocess_data(self, instance_data):
         """

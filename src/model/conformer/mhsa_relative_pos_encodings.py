@@ -74,7 +74,7 @@ class MHSAWithRelativePosEncoding(nn.Module):
     def _shift_relative_pos(self, x):
         batch_size, attention_heads, i, j = x.size()
 
-        zero_pad = torch.zeros(batch_size, attention_heads, i, 1)
+        zero_pad = torch.zeros(batch_size, attention_heads, i, 1, device=x.device)
         x_padded = torch.cat([zero_pad, x], dim=-1)
         x_padded = x_padded.view(batch_size, attention_heads, j+1, i)
         x = x_padded[:, :, 1:].view_as(x)

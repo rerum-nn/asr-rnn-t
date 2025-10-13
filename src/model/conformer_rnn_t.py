@@ -33,8 +33,8 @@ class ConformerRNNT(nn.Module):
         self.prediction_network = PredictionNetwork(encoder_dim, hidden_dim, hidden_dim, self.vocab_size, pad_idx)
         self.joint_network = JointNetwork(hidden_dim, self.vocab_size)
 
-    def forward(self, spectrogram, text_encoded, spectrogram_length, **kwargs):
-        f, x_lengths = self.conformer(spectrogram, spectrogram_length)
+    def forward(self, x, text_encoded, spectrogram_length, **kwargs):
+        f, x_lengths = self.conformer(x, spectrogram_length)
         g, _, _ = self.prediction_network(text_encoded)
         logits = self.joint_network(f, g)
         log_probs = F.log_softmax(logits, dim=-1)
