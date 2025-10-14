@@ -55,7 +55,7 @@ class Trainer(BaseTrainer):
 
         if self.is_train:
             with record_function("backward_pass"):
-                batch["loss"].backward()  # sum of all losses is always called loss
+                batch["loss"].backward()
 
             with record_function("optimizer_step"):
                 self._clip_grad_norm()

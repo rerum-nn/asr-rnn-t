@@ -1,8 +1,9 @@
 import random
 
 import numpy as np
+import torch
+from librosa.effects import pitch_shift
 from torch import nn
-from torchaudio.functional import pitch_shift
 
 
 class PitchShift(nn.Module):
@@ -16,8 +17,10 @@ class PitchShift(nn.Module):
     def __call__(self, x):
         if random.random() >= self.p:
             return x
-        return pitch_shift(
-            x,
-            sample_rate=self.sr,
-            n_steps=np.random.uniform(self.min_semitones, self.max_semitones),
+        return torch.from_numpy(
+            pitch_shift(
+                x.numpy(),
+                sr=self.sr,
+                n_steps=np.random.uniform(self.min_semitones, self.max_semitones),
+            )
         )

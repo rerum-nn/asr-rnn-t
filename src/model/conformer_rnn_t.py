@@ -1,28 +1,30 @@
-import torch
-from torch import nn
-from .conformer.conformer import Conformer
-from .rnn_transducer.rnn_transducer import PredictionNetwork, JointNetwork 
 import torch.nn.functional as F
+from torch import nn
+
+from .conformer.conformer import Conformer
+from .rnn_transducer.rnn_transducer import JointNetwork, PredictionNetwork
 
 
 class ConformerRNNT(nn.Module):
     def __init__(
-            self, 
-            max_length,
-            input_dim,
-            n_tokens,
-            pad_idx,
-            bos_idx,
-            encoder_dim=144,
-            subsampling_dim=256,
-            encoder_layers=16, 
-            attention_heads=4,
-            conv_kernel_size=31, 
-            hidden_dim=128,
-            max_tokens=3,
-            dropout_rate=0.1,
-            lstm_dropout_rate=0.3
-        ):
+        self,
+        max_length,
+        input_dim,
+        n_tokens,
+        pad_idx,
+        bos_idx,
+        encoding_dim=512,
+        conformer_encoder_dim=144,
+        conformer_subsampling_dim=256,
+        conformer_encoder_layers=16,
+        conformer_attention_heads=4,
+        conformer_conv_kernel_size=31,
+        conformer_dropout_rate=0.1,
+        num_lstm_layers=1,
+        lstm_hidden_dim=256,
+        lstm_dropout_rate=0.3,
+        max_tokens=3,
+    ):
         super().__init__()
 
         self.max_length = max_length
@@ -32,30 +34,31 @@ class ConformerRNNT(nn.Module):
 
         self.conformer = Conformer(
             max_length=max_length,
-            input_dim=input_dim, 
-            output_dim=hidden_dim, 
-            encoder_dim=encoder_dim, 
-            subsampling_dim=subsampling_dim, 
-            encoder_layers=encoder_layers, 
-            attention_heads=attention_heads, 
-            conv_kernel_size=conv_kernel_size, 
-            dropout_rate=dropout_rate
+            input_dim=input_dim,
+            output_dim=encoding_dim,
+            encoder_dim=conformer_encoder_dim,
+            subsampling_dim=conformer_subsampling_dim,
+            encoder_layers=conformer_encoder_layers,
+            attention_heads=conformer_attention_heads,
+            conv_kernel_size=conformer_conv_kernel_size,
+            dropout_rate=conformer_dropout_rate,
         )
         self.prediction_network = PredictionNetwork(
-            hidden_dim=hidden_dim, 
-            output_dim=hidden_dim, 
-            vocab_size=self.vocab_size, 
-            pad_idx=pad_idx, 
-            dropout_rate=lstm_dropout_rate
+            hidden_dim=lstm_hidden_dim,
+            output_dim=encoding_dim,
+            num_lstm_layers=num_lstm_layers,
+            vocab_size=n_tokens,
+            pad_idx=pad_idx,
+            dropout_rate=lstm_dropout_rate,
         )
-        self.joint_network = JointNetwork(hidden_dim, self.vocab_size)
+        self.joint_network = JointNetwork(encoding_dim, n_tokens)
 
     def forward(self, x, text_encoded, spectrogram_length, **kwargs):
         f, x_lengths = self.conformer(x, spectrogram_length)
         g, _, _ = self.prediction_network(text_encoded)
         logits = self.joint_network(f, g)
         log_probs = F.log_softmax(logits, dim=-1)
-        
+
         return {"log_probs": log_probs, "log_probs_length": x_lengths}
 
     def __str__(self):

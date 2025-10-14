@@ -1,4 +1,5 @@
 import re
+from itertools import groupby
 from string import ascii_lowercase
 
 import torch
@@ -59,7 +60,7 @@ class CTCTextEncoder:
         return "".join([self.ind2char[int(ind)] for ind in inds]).strip()
 
     def ctc_decode(self, inds) -> str:
-        pass  # TODO
+        return "".join([k for k, _ in groupby(inds) if k != self.EMPTY_TOK])
 
     @staticmethod
     def normalize_text(text: str):
