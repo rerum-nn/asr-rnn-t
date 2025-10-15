@@ -21,11 +21,12 @@ lr_scheduler:
 loss_function:
   _target_: src.loss.RNNTLossWrapper
 text_encoder:
-  _target_: src.text_encoder.RNNTTextEncoder
+  _target_: src.text_encoder.RNNTTextEncoderBPE
+  bpe_model_path: bpe.model
 trainer:
   log_step: 50
   n_epochs: 100
-  epoch_len: 2000
+  epoch_len: 100
   enable_profiler: False
   device_tensors: ["x", "text_encoded", "spectrogram_length", "text_encoded_length"] # which tensors should be on device (ex. GPU)
   resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml

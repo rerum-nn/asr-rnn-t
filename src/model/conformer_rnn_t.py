@@ -1,3 +1,4 @@
+import torch
 import torch.nn.functional as F
 from torch import nn
 
@@ -23,7 +24,7 @@ class ConformerRNNT(nn.Module):
         num_lstm_layers=1,
         lstm_hidden_dim=256,
         lstm_dropout_rate=0.3,
-        max_tokens=3,
+        max_tokens_per_frame=3,
     ):
         super().__init__()
 
@@ -31,6 +32,8 @@ class ConformerRNNT(nn.Module):
         self.vocab_size = n_tokens
         self.bos_idx = bos_idx
         self.pad_idx = pad_idx
+
+        self.max_tokens_per_frame = max_tokens_per_frame
 
         self.conformer = Conformer(
             max_length=max_length,
@@ -60,6 +63,56 @@ class ConformerRNNT(nn.Module):
         log_probs = F.log_softmax(logits, dim=-1)
 
         return {"log_probs": log_probs, "log_probs_length": x_lengths}
+
+    def infer(self, x, spectrogram_length):
+        with torch.no_grad():
+            batch, x_lengths = self.conformer(x, spectrogram_length)
+
+            result = []
+            for i in range(len(batch)):
+                sample = batch[i]
+                length = x_lengths[i]
+
+                h = None
+                c = None
+                prediction = [self.bos_idx]
+                for frame in sample[:length]:
+                    for _ in range(self.max_tokens_per_frame):
+                        g, h, c = self.prediction_network(prediction, h, c)
+                        logits = self.joint_network.infer(frame, g)
+                        log_probs = F.log_softmax(logits, dim=-1)
+                        next_token = log_probs.argmax(dim=-1)
+                        if next_token == self.vocab_size:
+                            break
+                        prediction.append(next_token)
+                result.append(prediction)
+
+        return {"result": result}
+
+    def infer_beam_search(self, x, spectrogram_length):
+        with torch.no_grad():
+            batch, x_lengths = self.conformer(x, spectrogram_length)
+
+            result = []
+            for i in range(len(batch)):
+                sample = batch[i]
+                length = x_lengths[i]
+
+                h = None
+                c = None
+                prediction = [self.bos_idx]
+                for frame in sample[:length]:
+                    for _ in range(self.max_tokens_per_frame):
+                        g, h, c = self.prediction_network(prediction, h, c)
+                        logits = self.joint_network.infer(frame, g)
+                        log_probs = F.log_softmax(logits, dim=-1)
+                        next_token = log_probs.argmax(dim=-1)
+                        if next_token == self.vocab_size:
+                            break
+                        prediction.append(next_token)
+                result.append(prediction)
+
+        return {"result": result}
 
     def __str__(self):
         """

@@ -56,6 +56,7 @@ class JointNetwork(nn.Module):
 
         self.activation = nn.ReLU()
         self.linear = nn.Linear(hidden_dim, vocab_size)
+        self.LayerNorm = nn.LayerNorm(vocab_size)
 
     def forward(self, f, p):
         f = f.unsqueeze(2).contiguous()
@@ -63,4 +64,11 @@ class JointNetwork(nn.Module):
 
         combined = f + p
         logits = self.linear(self.activation(combined))
+        logits = self.LayerNorm(logits)
+        return logits
+
+    def infer(self, f, p):
+        combined = f + p
+        logits = self.linear(self.activation(combined))
+        logits = self.LayerNorm(logits)
         return logits
