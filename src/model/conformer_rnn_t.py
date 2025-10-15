@@ -75,44 +75,37 @@ class ConformerRNNT(nn.Module):
 
                 h = None
                 c = None
-                prediction = [self.bos_idx]
+                prediction = []
+                last_token = self.bos_idx
                 for frame in sample[:length]:
                     for _ in range(self.max_tokens_per_frame):
-                        g, h, c = self.prediction_network(prediction, h, c)
+                        g, h, c = self.prediction_network(last_token, h, c)
                         logits = self.joint_network.infer(frame, g)
                         log_probs = F.log_softmax(logits, dim=-1)
                         next_token = log_probs.argmax(dim=-1)
                         if next_token == self.vocab_size:
                             break
+                        last_token = next_token
                         prediction.append(next_token)
                 result.append(prediction)
 
         return {"result": result}
 
-    def infer_beam_search(self, x, spectrogram_length):
-        with torch.no_grad():
-            batch, x_lengths = self.conformer(x, spectrogram_length)
+    # def infer_beam_search(self, x, spectrogram_length):
+    #     with torch.no_grad():
+    #         encodings, x_lengths = self.conformer(x, spectrogram_length)
 
-            result = []
-            for i in range(len(batch)):
-                sample = batch[i]
-                length = x_lengths[i]
+    #         for i in range(len(encodings)):
+    #             encoding = encodings[i]
+    #             length = x_lengths[i]
 
-                h = None
-                c = None
-                prediction = [self.bos_idx]
-                for frame in sample[:length]:
-                    for _ in range(self.max_tokens_per_frame):
-                        g, h, c = self.prediction_network(prediction, h, c)
-                        logits = self.joint_network.infer(frame, g)
-                        log_probs = F.log_softmax(logits, dim=-1)
-                        next_token = log_probs.argmax(dim=-1)
-                        if next_token == self.vocab_size:
-                            break
-                        prediction.append(next_token)
-                result.append(prediction)
+    #             b_hypo = [self.bos_idx]
 
-        return {"result": result}
+    #             for frame in encoding[:length]:
+    #                 a_hypo = b_hypo
+    #                 b_hypo = []
+
+    #     return {"result": result}
 
     def __str__(self):
         """

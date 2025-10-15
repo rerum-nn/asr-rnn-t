@@ -15,7 +15,7 @@ class Trainer(BaseTrainer):
     Trainer class. Defines the logic of batch logging and processing.
     """
 
-    def process_batch(self, batch, metrics: MetricTracker):
+    def process_batch(self, batch_idx, batch, metrics: MetricTracker):
         """
         Run batch through the model, compute metrics, compute loss,
         and do training step (during training stage).
@@ -43,7 +43,6 @@ class Trainer(BaseTrainer):
         metric_funcs = self.metrics["inference"]
         if self.is_train:
             metric_funcs = self.metrics["train"]
-            self.optimizer.zero_grad()
 
         with record_function("model_forward"):
             outputs = self.model(**batch)
@@ -54,22 +53,20 @@ class Trainer(BaseTrainer):
         batch.update(all_losses)
 
         if self.is_train:
+            original_loss = batch["loss"]
+            batch["loss"] = batch["loss"] / self.gradient_accumulation_steps
             with record_function("backward_pass"):
                 batch["loss"].backward()
-
-            with record_function("optimizer_step"):
-                self._clip_grad_norm()
-                self.optimizer.step()
-                if self.lr_scheduler is not None:
-                    self.lr_scheduler.step()
+            batch["loss"] = original_loss
 
         # update metrics for each loss (in case of multiple losses)
-        with record_function("metrics_update"):
-            for loss_name in self.config.writer.loss_names:
-                metrics.update(loss_name, batch[loss_name].item())
+        if batch_idx % self.log_step == 0:
+            with record_function("metrics_update"):
+                for loss_name in self.config.writer.loss_names:
+                    metrics.update(loss_name, batch[loss_name].item())
 
-            for met in metric_funcs:
-                metrics.update(met.name, met(**batch))
+                for met in metric_funcs:
+                    metrics.update(met.name, met(**batch))
         return batch
 
     def _log_batch(self, batch_idx, batch, mode="train"):
@@ -124,7 +121,7 @@ class Trainer(BaseTrainer):
             inds[: int(ind_len)]
             for inds, ind_len in zip(argmax_inds, log_probs_length.cpu().numpy())
         ]
-        argmax_texts = [self.text_encoder.rnnt_decode(inds) for inds in argmax_inds]
+        argmax_texts = [self.text_encoder.output_decode(inds) for inds in argmax_inds]
         tuples = list(zip(argmax_texts, text, audio_path))
 
         rows = {}

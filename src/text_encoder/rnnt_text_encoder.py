@@ -69,6 +69,9 @@ class RNNTTextEncoder:
                 parsed_inds.append(row[j])
         return self.decode(parsed_inds)
 
+    def output_decode(self, inds) -> str:
+        return self.rnnt_decode(inds)
+
     @staticmethod
     def normalize_text(text: str):
         text = text.lower()
@@ -79,8 +82,8 @@ class RNNTTextEncoder:
 class RNNTTextEncoderBPE(RNNTTextEncoder):
     def __init__(self, bpe_model_path=None, **kwargs):
         self.bpe_model = yttm.BPE(bpe_model_path)
-        self.bos_idx = self.bpe_model.encode("<BOS>")
-        self.pad_idx = self.bpe_model.encode("<PAD>")
+        self.bos_idx = 1
+        self.pad_idx = 0
 
     def __len__(self):
         return self.bpe_model.vocab_size()

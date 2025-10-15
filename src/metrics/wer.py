@@ -24,6 +24,6 @@ class ArgmaxWERMetric(BaseMetric):
         lengths = log_probs_length.detach().cpu().numpy()
         for log_prob_vec, length, target_text in zip(predictions, lengths, text):
             target_text = self.text_encoder.normalize_text(target_text)
-            pred_text = self.text_encoder.rnnt_decode(log_prob_vec[:length])
+            pred_text = self.text_encoder.output_decode(log_prob_vec[:length])
             wers.append(calc_wer(target_text, pred_text))
         return sum(wers) / len(wers)

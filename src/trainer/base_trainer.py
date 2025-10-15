@@ -32,6 +32,7 @@ class BaseTrainer:
         epoch_len=None,
         skip_oom=True,
         batch_transforms=None,
+        gradient_accumulation_steps=1,
     ):
         """
         Args:
@@ -155,7 +156,9 @@ class BaseTrainer:
                 with_stack=True,
             )
 
-        self.scaler = None  # AMP disabled
+        self.gradient_accumulation_steps = self.cfg_trainer.get(
+            "gradient_accumulation_steps", 1
+        )
 
         if config.trainer.get("resume_from") is not None:
             resume_path = self.checkpoint_dir / config.trainer.resume_from
@@ -222,6 +225,7 @@ class BaseTrainer:
         self.is_train = True
         self.model.train()
         self.train_metrics.reset()
+        self.optimizer.zero_grad()
         self.writer.set_step((epoch - 1) * self.epoch_len)
         self.writer.add_scalar("epoch", epoch)
 
@@ -233,6 +237,7 @@ class BaseTrainer:
         ):
             try:
                 batch = self.process_batch(
+                    batch_idx,
                     batch,
                     metrics=self.train_metrics,
                 )
@@ -248,7 +253,12 @@ class BaseTrainer:
                 else:
                     raise e
 
-            self.train_metrics.update("grad_norm", self._get_grad_norm())
+            if (batch_idx + 1) % self.gradient_accumulation_steps == 0:
+                self._clip_grad_norm()
+                self.train_metrics.update("grad_norm", self._get_grad_norm())
+                self.optimizer.step()
+                self.optimizer.zero_grad()
+                self.lr_scheduler.step()
 
             # log current results
             if batch_idx % self.log_step == 0:
@@ -272,6 +282,13 @@ class BaseTrainer:
 
         if self.enable_profiler and self.profiler is not None:
             self.profiler.stop()
+
+        if (batch_idx + 1) % self.gradient_accumulation_steps != 0:
+            self._clip_grad_norm()
+            self.train_metrics.update("grad_norm", self._get_grad_norm())
+            self.optimizer.step()
+            self.optimizer.zero_grad()
+            self.lr_scheduler.step()
 
         logs = last_train_metrics
 
@@ -313,6 +330,7 @@ class BaseTrainer:
                 total=len(dataloader),
             ):
                 batch = self.process_batch(
+                    0,
                     batch,
                     metrics=self.evaluation_metrics,
                 )
@@ -440,6 +458,8 @@ class BaseTrainer:
         if isinstance(parameters, torch.Tensor):
             parameters = [parameters]
         parameters = [p for p in parameters if p.grad is not None]
+        if not parameters:
+            return 0.0
         total_norm = torch.norm(
             torch.stack([torch.norm(p.grad.detach(), norm_type) for p in parameters]),
             norm_type,
@@ -588,7 +608,7 @@ class BaseTrainer:
             self.logger.info(f"Loading model weights from: {pretrained_path} ...")
         else:
             print(f"Loading model weights from: {pretrained_path} ...")
-        checkpoint = torch.load(pretrained_path, self.device)
+        checkpoint = torch.load(pretrained_path, self.device, weights_only=False)
 
         if checkpoint.get("state_dict") is not None:
             self.model.load_state_dict(checkpoint["state_dict"])

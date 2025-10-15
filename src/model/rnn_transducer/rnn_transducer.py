@@ -1,4 +1,5 @@
 import torch
+import torch.nn.init as init
 from torch import nn
 
 
@@ -32,6 +33,21 @@ class PredictionNetwork(nn.Module):
         self.hidden_output = nn.Linear(hidden_dim, output_dim)
         self.output_layer_norm = nn.LayerNorm(output_dim)
 
+        self._init_weights()
+
+    def _init_weights(self):
+        for name, param in self.hidden_activation.named_parameters():
+            if "weight_hh" in name:
+                nn.init.orthogonal_(param)
+            elif "weight_ih" in name:
+                nn.init.kaiming_uniform_(param, nonlinearity="sigmoid")
+            elif "bias" in name:
+                nn.init.zeros_(param)
+
+        nn.init.xavier_uniform_(self.hidden_output.weight)
+        if self.hidden_output.bias is not None:
+            nn.init.zeros_(self.hidden_output.bias)
+
     def forward(self, y, h=None, c=None):
         if h is None or c is None:
             c = torch.zeros(
@@ -56,7 +72,13 @@ class JointNetwork(nn.Module):
 
         self.activation = nn.ReLU()
         self.linear = nn.Linear(hidden_dim, vocab_size)
-        self.LayerNorm = nn.LayerNorm(vocab_size)
+
+        self._init_weights()
+
+    def _init_weights(self):
+        nn.init.xavier_uniform_(self.linear.weight)
+        if self.linear.bias is not None:
+            nn.init.zeros_(self.linear.bias)
 
     def forward(self, f, p):
         f = f.unsqueeze(2).contiguous()
@@ -64,11 +86,9 @@ class JointNetwork(nn.Module):
 
         combined = f + p
         logits = self.linear(self.activation(combined))
-        logits = self.LayerNorm(logits)
         return logits
 
     def infer(self, f, p):
         combined = f + p
         logits = self.linear(self.activation(combined))
-        logits = self.LayerNorm(logits)
         return logits
