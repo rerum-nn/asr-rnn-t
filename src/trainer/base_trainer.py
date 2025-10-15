@@ -258,7 +258,7 @@ class BaseTrainer:
                 self.train_metrics.update("grad_norm", self._get_grad_norm())
                 self.optimizer.step()
                 self.optimizer.zero_grad()
-                self.lr_scheduler.step()
+            self.lr_scheduler.step()
 
             # log current results
             if batch_idx % self.log_step == 0:
