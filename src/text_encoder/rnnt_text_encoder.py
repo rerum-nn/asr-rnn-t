@@ -98,4 +98,6 @@ class RNNTTextEncoderBPE(RNNTTextEncoder):
         ).unsqueeze(0)
 
     def decode(self, inds):
-        return self.bpe_model.decode([int(i) for i in inds])[0]
+        if len(inds) == 0:
+            return ""
+        return self.bpe_model.decode([int(i) for i in inds if i != self.bpe_model.vocab_size()])[0]

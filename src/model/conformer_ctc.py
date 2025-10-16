@@ -29,11 +29,15 @@ class ConformerCTC(Conformer):
             dropout_rate=dropout_rate,
         )
 
-        self.out_projection = nn.Linear(encoding_dim, n_tokens)
         self.out_activation = nn.ReLU()
+        self.out_layer_norm = nn.LayerNorm(encoding_dim)
+        self.out_dropout = nn.Dropout(dropout_rate)
+        self.out_projection = nn.Linear(encoding_dim, n_tokens)
 
     def forward(self, x, spectrogram_length, **kwargs):
         x, x_lengths = super().forward(x, spectrogram_length)
+        x = self.out_layer_norm(x)
         x = self.out_activation(x)
+        x = self.out_dropout(x)
         x = self.out_projection(x)
         return {"log_probs": x, "log_probs_length": x_lengths}
