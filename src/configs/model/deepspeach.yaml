@@ -1,0 +1,6 @@
+_target_: src.model.DeepSpeech2
+input_dim: 80
+hidden_dim: 768
+subsampling_dim: 32
+dropout_rate: 0.1
+gru_layers: 5

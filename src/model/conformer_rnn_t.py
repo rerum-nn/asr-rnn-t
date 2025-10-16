@@ -91,53 +91,50 @@ class ConformerRNNT(nn.Module):
 
         return {"result": result}
 
-    def infer_beam_search(self, x, spectrogram_length, beam_size=10):
-        with torch.no_grad():
-            encodings, x_lengths = self.conformer(x, spectrogram_length)
+        # def infer_beam_search(self, x, spectrogram_length, beam_size=10):
+        #     with torch.no_grad():
+        #         encodings, x_lengths = self.conformer(x, spectrogram_length)
 
-            for i in range(len(encodings)):
-                encoding = encodings[i]
-                length = x_lengths[i]
+        #         for i in range(len(encodings)):
+        #             encoding = encodings[i]
+        #             length = x_lengths[i]
 
-                # (token, probability)
-                b_hypos = [(self.bos_idx, 1.0)]
+        #             # (token, probability)
+        #             b_hypos = [(self.bos_idx, 1.0)]
 
-                beam_hypos = {}
+        #             beam_hypos = {}
 
-                for frame in encoding[:length]:
-                    a_hypos = b_hypos
-                    b_hypos = []
-                    
-                    while a_hypos:
-                        next_token_probs = []
+        #             for frame in encoding[:length]:
+        #                 a_hypos = b_hypos
+        #                 b_hypos = []
 
-                        for hypo in a_hypos:
-                            g, h, c = self.prediction_network(hypo, h, c)
-                            logits = self.joint_network.infer(frame, g)
-                            log_probs = F.log_softmax(logits, dim=-1).squeeze(0, 1)
-                            next_token = log_probs.argmax(dim=-1)
-                            if next_token == self.vocab_size:
-                                break
-                            next_token_probs.append(log_probs)
+        #                 while a_hypos:
+        #                     next_token_probs = []
 
-                            with_blank = hypo[1] + log_probs[-1]
+        #                     for hypo in a_hypos:
+        #                         g, h, c = self.prediction_network(hypo, h, c)
+        #                         logits = self.joint_network.infer(frame, g)
+        #                         log_probs = F.log_softmax(logits, dim=-1).squeeze(0, 1)
+        #                         next_token = log_probs.argmax(dim=-1)
+        #                         if next_token == self.vocab_size:
+        #                             break
+        #                         next_token_probs.append(log_probs)
 
-                            hypo_key = " ".join([str(token) for token in hypo[0]])
-                            if hypo_key not in beam_hypos:
-                                beam_hypos[hypo_key] = (hypo[0], with_blank)
+        #                         with_blank = hypo[1] + log_probs[-1]
 
+        #                         hypo_key = " ".join([str(token) for token in hypo[0]])
+        #                         if hypo_key not in beam_hypos:
+        #                             beam_hypos[hypo_key] = (hypo[0], with_blank)
 
-                        for hypo in a_hypos:
-                            g, h, c = self.prediction_network(hypo[0], h, c)
-                            logits = self.joint_network.infer(frame, g)
-                            log_probs = F.log_softmax(logits, dim=-1)
-                            next_token = log_probs.argmax(dim=-1)
-                            if next_token == self.vocab_size:
-                                break
-                
-                result.append(b_hypos)
+        #                     for hypo in a_hypos:
+        #                         g, h, c = self.prediction_network(hypo[0], h, c)
+        #                         logits = self.joint_network.infer(frame, g)
+        #                         log_probs = F.log_softmax(logits, dim=-1)
+        #                         next_token = log_probs.argmax(dim=-1)
+        #                         if next_token == self.vocab_size:
+        #                             break
 
-                
+        #             result.append(b_hypos)
 
         return {"result": result}
 

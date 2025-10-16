@@ -30,6 +30,8 @@ class CTCTextEncoder:
         self.ind2char = dict(enumerate(self.vocab))
         self.char2ind = {v: k for k, v in self.ind2char.items()}
 
+        self.empty_tok = self.char2ind[self.EMPTY_TOK]
+
     def __len__(self):
         return len(self.vocab)
 
@@ -61,6 +63,31 @@ class CTCTextEncoder:
 
     def ctc_decode(self, inds) -> str:
         return "".join([self.ind2char[k] for k, _ in groupby(inds) if k != 0])
+
+    def beam_search_decode(self, log_probs, beam_size=10) -> str:
+        hypos = {"": (self.empty_tok, 1.0)}
+
+        for i in range(len(log_probs)):
+            frame = log_probs[i]
+
+            for hypo_key, hypo in hypos.items():
+                for token in frame:
+                    if token == hypo[0]:
+                        new_hypo_key = hypo_key
+                    else:
+                        new_hypo_key = hypo_key + self.ind2char[token]
+
+                    new_hypo_prob = hypo[1] * frame[token].exp()
+                    if new_hypo_key not in hypos:
+                        hypos[new_hypo_key] = new_hypo_prob
+                    else:
+                        hypos[new_hypo_key] += new_hypo_prob
+
+            hypos = dict(
+                sorted(hypos.items(), key=lambda x: x[1][1], reverse=True)[:beam_size]
+            )
+
+        return max(hypos.items(), key=lambda x: x[1][1])[0]
 
     def output_decode(self, inds) -> str:
         return self.ctc_decode(inds)

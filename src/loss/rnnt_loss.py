@@ -4,7 +4,7 @@ from torchaudio.transforms import RNNTLoss
 
 class RNNTLossWrapper(RNNTLoss):
     def __init__(self, *args, **kwargs):
-        super().__init__(fused_log_softmax=False, *args, **kwargs)
+        super().__init__(fused_log_softmax=False, blank=0, *args, **kwargs)
 
     def forward(
         self, log_probs, text_encoded, log_probs_length, text_encoded_length, **kwargs

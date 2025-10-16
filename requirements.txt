@@ -14,7 +14,7 @@ pandas
 wandb
 comet_ml
 editdistance
-sentencepiece
+youtokentome
 librosa
 hydra-core
 

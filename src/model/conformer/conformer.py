@@ -51,7 +51,6 @@ class Conformer(nn.Module):
         )
 
         self.output_projection = nn.Linear(encoder_dim, output_dim)
-        self.output_layer_norm = nn.LayerNorm(output_dim)
 
     def forward(self, x, input_lengths):
         x = self.conv_subsampling(x.unsqueeze(1))
@@ -64,7 +63,6 @@ class Conformer(nn.Module):
             x = conformer_block(x)
 
         x = self.output_projection(x)
-        x = self.output_layer_norm(x)
 
         return x, input_lengths
 

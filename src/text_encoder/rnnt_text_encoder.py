@@ -11,7 +11,7 @@ import youtokentome as yttm
 
 
 class RNNTTextEncoder:
-    PAD_TOK = "<pad>"
+    EMPTY_TOK = ""
     BOS_TOK = "<bos>"
 
     def __init__(self, alphabet=None, **kwargs):
@@ -25,7 +25,10 @@ class RNNTTextEncoder:
             alphabet = list(ascii_lowercase + " ")
 
         self.alphabet = alphabet
-        self.vocab = [self.PAD_TOK, self.BOS_TOK] + list(self.alphabet)
+        self.vocab = [self.EMPTY_TOK, self.BOS_TOK] + list(self.alphabet)
+
+        self.empty_tok = self.char2ind[self.EMPTY_TOK]
+        self.bos_tok = self.char2ind[self.BOS_TOK]
 
         self.ind2char = dict(enumerate(self.vocab))
         self.char2ind = {v: k for k, v in self.ind2char.items()}
@@ -63,7 +66,7 @@ class RNNTTextEncoder:
         j = 0
         for i in range(inds.shape[1]):
             row = inds[:, i]
-            while j < len(row) and row[j] == len(self):
+            while j < len(row) and row[j] == self.empty_tok:
                 j += 1
             if j < len(row):
                 parsed_inds.append(row[j])
@@ -100,4 +103,6 @@ class RNNTTextEncoderBPE(RNNTTextEncoder):
     def decode(self, inds):
         if len(inds) == 0:
             return ""
-        return self.bpe_model.decode([int(i) for i in inds if i != self.bpe_model.vocab_size()])[0]
+        return self.bpe_model.decode(
+            [int(i) for i in inds if i != self.bpe_model.vocab_size()]
+        )[0]

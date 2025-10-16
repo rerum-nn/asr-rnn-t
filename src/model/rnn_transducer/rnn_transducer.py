@@ -71,7 +71,7 @@ class JointNetwork(nn.Module):
         super().__init__()
 
         self.activation = nn.ReLU()
-        self.linear = nn.Linear(hidden_dim, vocab_size + 1)
+        self.linear = nn.Linear(hidden_dim, vocab_size)
 
         self._init_weights()
 
