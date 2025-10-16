@@ -10,7 +10,7 @@ class FrequencyMasking(nn.Module):
         self.frequency_mask_param = frequency_mask_param
         self.p = p
         self.frequency_masking = torchaudio.transforms.FrequencyMasking(
-            self.frequency_mask_param
+            self.frequency_mask_param, iid_masks=True
         )
 
     def __call__(self, x):

@@ -134,6 +134,8 @@ class BaseTrainer:
             writer=self.writer,
         )
 
+        self.report_beam = self.cfg_trainer.get("report_beam", False)
+
         # define checkpoint dir and init everything if required
 
         self.checkpoint_dir = (
@@ -288,7 +290,7 @@ class BaseTrainer:
             self.train_metrics.update("grad_norm", self._get_grad_norm())
             self.optimizer.step()
             self.optimizer.zero_grad()
-            self.lr_scheduler.step()
+        self.lr_scheduler.step()
 
         logs = last_train_metrics
 

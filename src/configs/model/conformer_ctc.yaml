@@ -1,10 +1,9 @@
 _target_: src.model.ConformerCTC
 max_length: 2000
 input_dim: 80
-encoder_dim: 144
-encoding_dim: 1024
+encoder_dim: 512
 subsampling_dim: 256
-encoder_layers: 16
+encoder_layers: 4
 attention_heads: 4
 conv_kernel_size: 31
 dropout_rate: 0.1

@@ -2,7 +2,6 @@ import re
 from string import ascii_lowercase
 
 import torch
-import youtokentome as yttm
 
 # TODO add BPE, LM, Beam Search support
 # Note: think about metrics and encoder
@@ -27,11 +26,11 @@ class RNNTTextEncoder:
         self.alphabet = alphabet
         self.vocab = [self.EMPTY_TOK, self.BOS_TOK] + list(self.alphabet)
 
-        self.empty_tok = self.char2ind[self.EMPTY_TOK]
-        self.bos_tok = self.char2ind[self.BOS_TOK]
-
         self.ind2char = dict(enumerate(self.vocab))
         self.char2ind = {v: k for k, v in self.ind2char.items()}
+
+        self.empty_tok = self.char2ind[self.EMPTY_TOK]
+        self.bos_tok = self.char2ind[self.BOS_TOK]
 
     def __len__(self):
         return len(self.vocab)
@@ -80,29 +79,3 @@ class RNNTTextEncoder:
         text = text.lower()
         text = re.sub(r"[^a-z ]", "", text)
         return text
-
-
-class RNNTTextEncoderBPE(RNNTTextEncoder):
-    def __init__(self, bpe_model_path=None, **kwargs):
-        self.bpe_model = yttm.BPE(bpe_model_path)
-        self.bos_idx = 1
-        self.pad_idx = 0
-
-    def __len__(self):
-        return self.bpe_model.vocab_size()
-
-    def __getitem__(self, item: int):
-        assert type(item) is int
-        return self.bpe_model.id_to_subword(item)
-
-    def encode(self, text):
-        return torch.Tensor(
-            self.bpe_model.encode(text, output_type=yttm.OutputType.ID, bos=True)
-        ).unsqueeze(0)
-
-    def decode(self, inds):
-        if len(inds) == 0:
-            return ""
-        return self.bpe_model.decode(
-            [int(i) for i in inds if i != self.bpe_model.vocab_size()]
-        )[0]

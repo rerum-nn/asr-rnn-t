@@ -101,8 +101,8 @@ class Trainer(BaseTrainer):
         audio_to_log = instance_audio[0]
         self.writer.add_audio("instance_audio", audio_to_log, sample_rate=16000)
 
-    def log_spectrogram(self, instance_spectrogram, spectrogram, **batch):
-        spectrogram_for_plot = spectrogram[0].detach().cpu()
+    def log_spectrogram(self, instance_spectrogram, x, **batch):
+        spectrogram_for_plot = x[0].detach().cpu()
         image = plot_spectrogram(spectrogram_for_plot)
         self.writer.add_image("spectrogram", image)
         spectrogram_for_plot = instance_spectrogram[0].detach().cpu()
@@ -121,31 +121,51 @@ class Trainer(BaseTrainer):
             inds[: int(ind_len)]
             for inds, ind_len in zip(argmax_inds, log_probs_length.cpu().numpy())
         ]
-        beam_search_pred = [
-            self.text_encoder.beam_search_decode(log_probs[i])
-            for i in range(len(log_probs))
-        ]
         argmax_texts = [self.text_encoder.output_decode(inds) for inds in argmax_inds]
-        tuples = list(zip(argmax_texts, beam_search_pred, text, audio_path))
 
-        rows = {}
-        for pred, beam_search_pred, target, audio_path in tuples[:examples_to_log]:
-            target = self.text_encoder.normalize_text(target)
-            wer = calc_wer(target, pred) * 100
-            cer = calc_cer(target, pred) * 100
-            beam_search_wer = calc_wer(target, beam_search_pred) * 100
-            beam_search_cer = calc_cer(target, beam_search_pred) * 100
+        if self.report_beam:
+            beam_search_pred = [
+                self.text_encoder.beam_search_decode(log_probs[i])
+                for i in range(len(log_probs))
+            ]
 
-            rows[Path(audio_path).name] = {
-                "target": target,
-                "argmax_predictions": pred,
-                "beam_search_predictions": beam_search_pred,
-                "argmax_wer": wer,
-                "argmax_cer": cer,
-                "beam_search_wer": beam_search_wer,
-                "beam_search_cer": beam_search_cer,
-                "step": self.writer.step,
-            }
+            tuples = list(zip(argmax_texts, beam_search_pred, text, audio_path))
+
+            rows = {}
+            for pred, beam_search_pred, target, audio_path in tuples[:examples_to_log]:
+                target = self.text_encoder.normalize_text(target)
+                wer = calc_wer(target, pred) * 100
+                cer = calc_cer(target, pred) * 100
+                beam_search_wer = calc_wer(target, beam_search_pred) * 100
+                beam_search_cer = calc_cer(target, beam_search_pred) * 100
+
+                rows[Path(audio_path).name] = {
+                    "target": target,
+                    "argmax_predictions": pred,
+                    "beam_search_predictions": beam_search_pred,
+                    "argmax_wer": wer,
+                    "argmax_cer": cer,
+                    "beam_search_wer": beam_search_wer,
+                    "beam_search_cer": beam_search_cer,
+                    "step": self.writer.step,
+                }
+        else:
+            tuples = list(zip(argmax_texts, text, audio_path))
+
+            rows = {}
+            for pred, target, audio_path in tuples[:examples_to_log]:
+                target = self.text_encoder.normalize_text(target)
+                wer = calc_wer(target, pred) * 100
+                cer = calc_cer(target, pred) * 100
+
+                rows[Path(audio_path).name] = {
+                    "target": target,
+                    "argmax_predictions": pred,
+                    "argmax_wer": wer,
+                    "argmax_cer": cer,
+                    "step": self.writer.step,
+                }
+
         self.writer.add_table(
             "predictions", pd.DataFrame.from_dict(rows, orient="index")
         )

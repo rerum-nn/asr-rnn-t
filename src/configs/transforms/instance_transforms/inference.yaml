@@ -1,0 +1,36 @@
+train:
+  get_spectrogram: # special key for getting spectrogram
+    _target_: torchaudio.transforms.MelSpectrogram
+    sample_rate: 16000
+    n_fft: 400
+    hop_length: 160
+    n_mels: 80
+  audio:
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.NormalizeRMS
+        target_rms: 0.1
+  spectrogram:
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.Logarithm
+      - _target_: src.transforms.NormalizeSpec
+
+
+inference:
+  get_spectrogram:
+    _target_: torchaudio.transforms.MelSpectrogram
+    sample_rate: 16000
+    n_fft: 400
+    hop_length: 160
+    n_mels: 80
+  audio:
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.NormalizeRMS
+  spectrogram:
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.Logarithm
+      - _target_: src.transforms.NormalizeSpec
+        params_path: normalization_params_clean.json

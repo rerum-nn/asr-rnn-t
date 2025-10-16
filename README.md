@@ -1,79 +1,111 @@
-# Automatic Speech Recognition (ASR) with PyTorch
+# ASR RNN-T
 
-<p align="center">
-  <a href="#about">About</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#how-to-use">How To Use</a> •
-  <a href="#credits">Credits</a> •
-  <a href="#license">License</a>
-</p>
+PyTorch implementation of Automatic Speech Recognition using RNN-Transducer with Conformer encoder.
 
-## About
 
-This repository contains a template for solving ASR task with PyTorch. This template branch is a part of the [HSE DLA course](https://github.com/markovka17/dla) ASR homework. Some parts of the code are missing (or do not follow the most optimal design choices...) and students are required to fill these parts themselves (as well as writing their own models, etc.).
+Implemented models: Conformer-RNN-T, Conformer-CTC, DeepSpeech2, and Baseline models
 
-See the task assignment [here](https://github.com/markovka17/dla/tree/2024/hw1_asr).
 
 ## Installation
 
-Follow these steps to install the project:
-
-0. (Optional) Create and activate new environment using [`conda`](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) or `venv` ([`+pyenv`](https://github.com/pyenv/pyenv)).
-
-   a. `conda` version:
-
+1. Clone the repository:
    ```bash
-   # create env
-   conda create -n project_env python=PYTHON_VERSION
-
-   # activate env
-   conda activate project_env
+   git clone https://github.com/rerum-nn/asr-rnn-t.git
+   cd asr-rnn-t
    ```
 
-   b. `venv` (`+pyenv`) version:
-
+2. Create virtual environment:
    ```bash
-   # create env
-   ~/.pyenv/versions/PYTHON_VERSION/bin/python3 -m venv project_env
-
-   # alternatively, using default python version
-   python3 -m venv project_env
-
-   # activate env
-   source project_env/bin/activate
+   conda create -n dla python=3.10
+   conda activate dla
    ```
 
-1. Install all required packages
-
+3. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-2. Install `pre-commit`:
-   ```bash
-   pre-commit install
-   ```
+## Usage
 
-## How To Use
-
-To train a model, run the following command:
-
+Train a model:
 ```bash
-python3 train.py -cn=CONFIG_NAME HYDRA_CONFIG_ARGUMENTS
+python train.py -cn=conformer_ctc
 ```
 
-Where `CONFIG_NAME` is a config from `src/configs` and `HYDRA_CONFIG_ARGUMENTS` are optional arguments.
-
-To run inference (evaluate the model or save predictions):
-
+Run inference:
 ```bash
-python3 inference.py HYDRA_CONFIG_ARGUMENTS
+python inference.py -cn=inference ++datasets.test.dir=path/to/custom_dataset
 ```
 
-## Credits
+See `demo.ipynb` for examples.
 
-This repository is based on a [PyTorch Project Template](https://github.com/Blinorot/pytorch_project_template).
+## Models
+
+**Conformer-RNN-T**: Main architecture with Conformer encoder, LSTM prediction network, and joint network.
+
+**Conformer-CTC**: CTC variant with Conformer encoder.
+
+**DeepSpeech2**: DeepSpeech2 implementation.
+
+## Configuration
+
+Uses Hydra for configuration. Main configs in `src/configs/`:
+- `conformer_ctc.yaml`: Main configuration
+- `conformer_rnn_t.yaml`: RNN-T configuration
+- `datasets/`: Dataset configs
+
+## Training
+
+```bash
+# Basic training
+python train.py -cn=conformer_rnn_t
+
+# Custom parameters
+python train.py -cn=conformer_rnn_t ++trainer.n_epochs=50 ++optimizer.lr=1e-3
+
+# Resume from checkpoint
+python train.py -cn=conformer_rnn_t ++trainer.resume_from=saved/conformer_m
+```
+
+## Inference
+
+```bash
+# Evaluate model
+python inference.py -cn=conformer_rnn_t ++datasets.test.dir=path/to/custom_dataset
+
+```
+
+## Calc metrics
+
+```bash
+python calc_metrics.py --predictions ./predictions/dir --dataset_dir ./dataset/dir
+```
+
+Metrics: WER, CER
+
+## Project Structure
+
+```
+src/
+├── configs/           # Configuration files
+├── datasets/          # Dataset implementations
+├── logger/            # Experiment tracking
+├── loss/              # Loss functions (CTC, RNN-T)
+├── metrics/           # Evaluation metrics
+├── model/             # Model architectures
+├── text_encoder/      # Text encoding (char, BPE)
+├── trainer/           # Training logic
+├── transforms/        # Audio transformations
+└── utils/             # Utility functions
+```
 
 ## License
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](/LICENSE)
+MIT License - see [LICENSE](LICENSE) file.
+
+## Acknowledgments
+
+- Based on [PyTorch Project Template](https://github.com/Blinorot/pytorch_project_template)
+- Part of [HSE DLA course](https://github.com/markovka17/dla) ASR homework
+- LibriSpeech dataset from [OpenSLR](https://www.openslr.org/12/)
+- Conformer architecture from [Conformer paper](https://arxiv.org/abs/2005.08100)

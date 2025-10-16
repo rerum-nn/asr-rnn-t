@@ -1,3 +1,4 @@
+import torch.nn.functional as F
 from torch import nn
 
 from src.model.conformer.conformer import Conformer
@@ -9,7 +10,6 @@ class ConformerCTC(Conformer):
         max_length,
         input_dim,
         n_tokens,
-        encoding_dim=512,
         encoder_dim=144,
         subsampling_dim=256,
         encoder_layers=16,
@@ -20,7 +20,7 @@ class ConformerCTC(Conformer):
         super().__init__(
             max_length=max_length,
             input_dim=input_dim,
-            output_dim=encoding_dim,
+            output_dim=n_tokens,
             encoder_dim=encoder_dim,
             subsampling_dim=subsampling_dim,
             encoder_layers=encoder_layers,
@@ -29,15 +29,7 @@ class ConformerCTC(Conformer):
             dropout_rate=dropout_rate,
         )
 
-        self.out_activation = nn.ReLU()
-        self.out_layer_norm = nn.LayerNorm(encoding_dim)
-        self.out_dropout = nn.Dropout(dropout_rate)
-        self.out_projection = nn.Linear(encoding_dim, n_tokens)
-
     def forward(self, x, spectrogram_length, **kwargs):
-        x, x_lengths = super().forward(x, spectrogram_length)
-        x = self.out_layer_norm(x)
-        x = self.out_activation(x)
-        x = self.out_dropout(x)
-        x = self.out_projection(x)
-        return {"log_probs": x, "log_probs_length": x_lengths}
+        logits, x_lengths = super().forward(x, spectrogram_length)
+        log_probs = F.log_softmax(logits, dim=-1)
+        return {"log_probs": log_probs, "log_probs_length": x_lengths}
