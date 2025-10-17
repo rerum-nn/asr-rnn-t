@@ -51,9 +51,9 @@ inference:
     _target_: torchvision.transforms.v2.Compose
     transforms:
       - _target_: src.transforms.NormalizeRMS
-  spectrogram:
-    _target_: torchvision.transforms.v2.Compose
-    transforms:
-      - _target_: src.transforms.Logarithm
-      - _target_: src.transforms.NormalizeSpec
-        params_path: normalization_params_clean.json
+  # spectrogram:
+  #   _target_: torchvision.transforms.v2.Compose
+  #   transforms:
+  #     - _target_: src.transforms.Logarithm
+  #     - _target_: src.transforms.NormalizeSpec
+  #       params_path: normalization_params_clean.json
