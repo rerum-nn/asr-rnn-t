@@ -28,11 +28,11 @@ class ArgmaxWERMetric(BaseMetric):
             wers.append(calc_wer(target_text, pred_text))
         return sum(wers) / len(wers)
 
-    def infer(self, result, text):
+    def infer(self, result, text, **kwargs):
         wers = []
         for pred_text, target_text in zip(result, text):
             target_text = self.text_encoder.normalize_text(target_text)
-            pred_text = self.text_encoder.output_decode(pred_text)
+            pred_text = self.text_encoder.decode(pred_text)
             wers.append(calc_wer(target_text, pred_text))
         return sum(wers) / len(wers)
 
@@ -59,10 +59,10 @@ class BeamSearchWERMetric(BaseMetric):
             wers.append(calc_wer(target_text, pred_text))
         return sum(wers) / len(wers)
 
-    def infer(self, result_beam, text):
+    def infer(self, result_beam, text, **kwargs):
         wers = []
         for pred_text, target_text in zip(result_beam, text):
             target_text = self.text_encoder.normalize_text(target_text)
-            pred_text = self.text_encoder.output_decode(pred_text)
+            pred_text = self.text_encoder.decode(pred_text)
             wers.append(calc_wer(target_text, pred_text))
         return sum(wers) / len(wers)

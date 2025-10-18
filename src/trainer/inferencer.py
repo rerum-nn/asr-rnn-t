@@ -26,6 +26,7 @@ class Inferencer(BaseTrainer):
         dataloaders,
         text_encoder,
         save_path,
+        writer,
         metrics=None,
         batch_transforms=None,
         skip_model_load=False,
@@ -73,7 +74,7 @@ class Inferencer(BaseTrainer):
         # path definition
 
         self.save_path = save_path
-
+        self.writer = writer
         # define metrics
         self.metrics = metrics
         if self.metrics is not None:
@@ -133,8 +134,8 @@ class Inferencer(BaseTrainer):
         outputs = self.model.infer(**batch)
         batch.update(outputs)
 
-        outputs_beam = self.model.infer_beam_search(**batch)
-        batch.update(outputs_beam)
+        # outputs_beam = self.model.infer_beam_search(beam_size=self.cfg_trainer.get('beam_size', 4) , **batch)
+        # batch.update(outputs_beam)
 
         if metrics is not None:
             for met in self.metrics["inference"]:
@@ -143,50 +144,47 @@ class Inferencer(BaseTrainer):
         # Some saving logic. This is an example
         # Use if you need to save predictions on disk
 
-        batch_size = batch["logits"].shape[0]
+        batch_size = len(batch["result"])
         current_id = batch_idx * batch_size
 
         for i in range(batch_size):
             # clone because of
             # https://github.com/pytorch/pytorch/issues/1995
-            log_probs = batch["log_probs"][i].clone()
-            pred_text = self.text_encoder.output_decode(log_probs.argmax(dim=-1))
+            pred_text = self.text_encoder.decode(batch["result"][i])
 
             if self.save_path is not None:
                 with open(
-                    self.save_path
-                    / part
-                    / f"output_{Path(batch['audio_path'][i]).stem}.txt",
+                    self.save_path / f"{Path(batch['audio_path'][i]).stem}.txt",
                     "w",
                 ) as f:
                     f.write(f"{pred_text}")
 
         return batch
 
-    def _log_batch(self, text, result, result_beam, audio_path, **batch):
-        argmax_texts = [self.text_encoder.output_decode(inds) for inds in result]
-        beam_search_texts = [
-            self.text_encoder.output_decode(inds) for inds in result_beam
-        ]
+    def _log_batch(self, text, result, audio_path, **batch):
+        argmax_texts = [self.text_encoder.decode(inds) for inds in result]
+        # beam_search_texts = [
+        #     self.text_encoder.decode(inds) for inds in result_beam
+        # ]
 
-        tuples = list(zip(argmax_texts, result_beam, text, audio_path))
+        tuples = list(zip(argmax_texts, text, audio_path))
 
         rows = {}
-        for pred, result_beam, target, audio_path in tuples:
+        for pred, target, audio_path in tuples:
             target = self.text_encoder.normalize_text(target)
             wer = calc_wer(target, pred) * 100
             cer = calc_cer(target, pred) * 100
-            beam_search_wer = calc_wer(target, beam_search_texts) * 100
-            beam_search_cer = calc_cer(target, beam_search_texts) * 100
+            # beam_search_wer = calc_wer(target, result_beam) * 100
+            # beam_search_cer = calc_cer(target, result_beam) * 100
 
             rows[Path(audio_path).name] = {
                 "target": target,
                 "argmax_predictions": pred,
-                "beam_search_predictions": result_beam,
+                # "beam_search_predictions": result_beam,
                 "argmax_wer": wer,
                 "argmax_cer": cer,
-                "beam_search_wer": beam_search_wer,
-                "beam_search_cer": beam_search_cer,
+                # "beam_search_wer": beam_search_wer,
+                # "beam_search_cer": beam_search_cer,
             }
 
         self.writer.add_table(
@@ -225,5 +223,7 @@ class Inferencer(BaseTrainer):
                     part=part,
                     metrics=self.evaluation_metrics,
                 )
+                self._log_batch(**batch)
+            self._log_scalars(self.evaluation_metrics)
 
         return self.evaluation_metrics.result()

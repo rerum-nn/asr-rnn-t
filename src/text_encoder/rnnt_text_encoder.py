@@ -64,6 +64,7 @@ class RNNTTextEncoder:
     def rnnt_decode(self, inds) -> str:
         parsed_inds = []
         j = 0
+        print(inds)
         for i in range(inds.shape[1]):
             row = inds[:, i]
             while j < len(row) and row[j] == self.empty_tok:

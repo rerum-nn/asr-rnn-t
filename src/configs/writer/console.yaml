@@ -1,0 +1,5 @@
+_target_: src.logger.ConsoleWriter
+project_name: "pytorch_asr_conformer_rnnt"
+run_name: "testing"
+loss_names: ["loss"]
+id_length: 8

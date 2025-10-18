@@ -1,15 +1,20 @@
 defaults:
-  - model: baseline
+  - model: conformer_rnn_t_small
   - metrics: inference
   - datasets: custom_dataset
+  - writer: console
   - dataloader: example
   - transforms: transforms
   - _self_
 text_encoder:
   _target_: src.text_encoder.RNNTTextEncoder
+writer:
+  run_name: "conformer-rnn-t-small-inference"
 inferencer:
   device_tensors: ["x", "text_encoded", "spectrogram_length", "text_encoded_length"] # which tensors should be on device (ex. GPU)
   device: auto # device name or "auto"
   save_path: "example" # any name here, can be a dataset name
   seed: 1337
-  from_pretrained: "saved/conformer-rnn-t-small/model_best.pth" # path to the pretrained model
+  from_pretrained: "saved/conformer-rnn-t-small-other/model_best.pth" # path to the pretrained model
+  beam_size: 4
+dir: "data/datasets/custom_dataset"

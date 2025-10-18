@@ -160,3 +160,37 @@ def setup_saving_and_logging(config):
     logger.setLevel(logging.DEBUG)
 
     return logger
+
+
+def saving_init_inferencer(save_dir, config):
+    """
+    Initialize saving by getting run_id.
+
+    Args:
+        save_dir (Path): path to the directory to log everything:
+            logs, checkpoints, config, etc.
+        config (DictConfig): hydra config for the current experiment.
+    """
+    run_id = None
+
+    save_dir.mkdir(exist_ok=True, parents=True)
+
+    if run_id is None:
+        run_id = generate_id(length=config.writer.id_length)
+
+    OmegaConf.set_struct(config, False)
+    config.writer.run_id = run_id
+    OmegaConf.set_struct(config, True)
+
+    OmegaConf.save(config, save_dir / "config.yaml")
+
+    log_git_commit_and_patch(save_dir)
+
+
+def setup_inferencer_saving_and_logging(config):
+    save_dir = ROOT_PATH / config.inferencer.save_path / config.writer.run_name
+    saving_init_inferencer(save_dir, config)
+    setup_logging(save_dir, append=True)
+    logger = logging.getLogger("inference")
+    logger.setLevel(logging.DEBUG)
+    return logger

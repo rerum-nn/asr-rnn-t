@@ -28,11 +28,11 @@ class ArgmaxCERMetric(BaseMetric):
             cers.append(calc_cer(target_text, pred_text))
         return sum(cers) / len(cers)
 
-    def infer(self, result, text):
+    def infer(self, result, text, **kwargs):
         cers = []
         for pred_text, target_text in zip(result, text):
             target_text = self.text_encoder.normalize_text(target_text)
-            pred_text = self.text_encoder.output_decode(pred_text)
+            pred_text = self.text_encoder.decode(pred_text)
             cers.append(calc_cer(target_text, pred_text))
         return sum(cers) / len(cers)
 
@@ -59,10 +59,10 @@ class BeamSearchCERMetric(BaseMetric):
             cers.append(calc_cer(target_text, pred_text))
         return sum(cers) / len(cers)
 
-    def infer(self, result_beam, text):
+    def infer(self, result_beam, text, **kwargs):
         cers = []
         for pred_text, target_text in zip(result_beam, text):
             target_text = self.text_encoder.normalize_text(target_text)
-            pred_text = self.text_encoder.output_decode(pred_text)
+            pred_text = self.text_encoder.decode(pred_text)
             cers.append(calc_cer(target_text, pred_text))
         return sum(cers) / len(cers)

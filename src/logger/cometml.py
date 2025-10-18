@@ -46,7 +46,10 @@ class CometMLWriter:
             self.run_id = run_id
 
             resume = False
-            if project_config["trainer"].get("resume_from") is not None:
+            if (
+                "trainer" in project_config
+                and project_config["trainer"].get("resume_from") is not None
+            ):
                 resume = True
 
             if resume:

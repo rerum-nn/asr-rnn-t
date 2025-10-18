@@ -1,7 +1,6 @@
 test:
   _target_: src.datasets.CustomDirAudioDataset
-  dir: "data/datasets/custom_dataset"
   audio_dir: ${dir}/audio
-  transcription_dir: ${dir}/transcriptions"
+  transcription_dir: ${dir}/transcriptions
   instance_transforms: ${transforms.instance_transforms.inference}
-  text_encoder: ${text_encoder.ctc_text_encoder}
+  text_encoder: ${text_encoder}

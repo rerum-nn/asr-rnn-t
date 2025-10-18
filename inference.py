@@ -3,10 +3,11 @@ import warnings
 import hydra
 import torch
 from hydra.utils import instantiate
+from omegaconf import OmegaConf
 
 from src.datasets.data_utils import get_dataloaders
 from src.trainer import Inferencer
-from src.utils.init_utils import set_random_seed
+from src.utils.init_utils import set_random_seed, setup_inferencer_saving_and_logging
 from src.utils.io_utils import ROOT_PATH
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -31,6 +32,9 @@ def main(config):
 
     # setup text_encoder
     text_encoder = instantiate(config.text_encoder)
+    project_config = OmegaConf.to_container(config)
+    logger = setup_inferencer_saving_and_logging(config)
+    writer = instantiate(config.writer, logger, project_config)
 
     # setup data_loader instances
     # batch_transforms should be put on device
@@ -61,6 +65,7 @@ def main(config):
         batch_transforms=batch_transforms,
         save_path=save_path,
         metrics=metrics,
+        writer=writer,
         skip_model_load=False,
     )
 
