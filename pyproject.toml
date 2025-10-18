@@ -1,0 +1,35 @@
+[project]
+name = "asr-rnn-t"
+version = "1.0.0"
+description = "ASR with RNN-Transducer and Conformer"
+requires-python = ">=3.8"
+dependencies = [
+    "torch==2.2.0",
+    "torchvision==0.17.0", 
+    "torchaudio==2.2.0",
+    "datasets",
+    "soundfile",
+    "numpy==1.26.4",
+    "scipy",
+    "torch_audiomentations",
+    "tqdm",
+    "matplotlib",
+    "pandas",
+    "wandb",
+    "comet_ml",
+    "editdistance",
+    "gdown",
+    "huggingface_hub",
+    "librosa",
+    "hydra-core",
+]
+
+[project.optional-dependencies]
+dev = ["black", "isort", "pre-commit", "pytest"]
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+line_length = 88
