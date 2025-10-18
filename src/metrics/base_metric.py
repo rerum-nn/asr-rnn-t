@@ -20,3 +20,10 @@ class BaseMetric:
         Can use external functions (like TorchMetrics) or custom ones.
         """
         raise NotImplementedError()
+
+    @abstractmethod
+    def infer(self, **batch):
+        """
+        Defines inference logic for a given batch.
+        """
+        raise NotImplementedError()

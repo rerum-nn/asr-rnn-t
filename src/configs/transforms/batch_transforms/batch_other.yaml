@@ -1,0 +1,21 @@
+train:
+  x: # name of the tensor on which we apply transform
+    _target_: torch.nn.Sequential # to apply several transforms sequentially
+    _args_:
+      - _target_: src.transforms.Logarithm
+      - _target_: src.transforms.NormalizeSpec
+        params_path: normalization_params_other.json
+      - _target_: src.transforms.FrequencyMasking
+        frequency_mask_param: 27
+        p: 0.8
+      - _target_: src.transforms.TimeMasking
+        time_mask_param: 15
+        p: 0.2
+        masks_number: 10
+inference:
+  x: # name of the tensor on which we apply transform
+    _target_: torch.nn.Sequential # to apply several transforms sequentially
+    _args_:
+      - _target_: src.transforms.Logarithm
+      - _target_: src.transforms.NormalizeSpec
+        params_path: normalization_params_other.json

@@ -2,10 +2,6 @@
 
 PyTorch implementation of Automatic Speech Recognition using RNN-Transducer with Conformer encoder.
 
-
-Implemented models: Conformer-RNN-T, Conformer-CTC, DeepSpeech2, and Baseline models
-
-
 ## Installation
 
 1. Clone the repository:
@@ -14,7 +10,7 @@ Implemented models: Conformer-RNN-T, Conformer-CTC, DeepSpeech2, and Baseline mo
    cd asr-rnn-t
    ```
 
-2. Create virtual environment:
+2. Create conda environment (strongly recommended):
    ```bash
    conda create -n dla python=3.10
    conda activate dla
@@ -23,6 +19,12 @@ Implemented models: Conformer-RNN-T, Conformer-CTC, DeepSpeech2, and Baseline mo
 3. Install dependencies:
    ```bash
    pip install -r requirements.txt
+   ```
+
+4. If you have troubles with library `youtokentome` installinng, please delete this dependency from `requirements.txt` and try next command:
+   ```bash
+   conda install youtokentome -c conda-forge
+   pip install -r requierements.txt
    ```
 
 ## Usage
@@ -39,19 +41,11 @@ python inference.py -cn=inference ++datasets.test.dir=path/to/custom_dataset
 
 See `demo.ipynb` for examples.
 
-## Models
-
-**Conformer-RNN-T**: Main architecture with Conformer encoder, LSTM prediction network, and joint network.
-
-**Conformer-CTC**: CTC variant with Conformer encoder.
-
-**DeepSpeech2**: DeepSpeech2 implementation.
-
 ## Configuration
 
 Uses Hydra for configuration. Main configs in `src/configs/`:
-- `conformer_ctc.yaml`: Main configuration
 - `conformer_rnn_t.yaml`: RNN-T configuration
+- `train_[clean|clean2|other].yaml`: training configs.
 - `datasets/`: Dataset configs
 
 ## Training
@@ -72,7 +66,11 @@ python train.py -cn=conformer_rnn_t ++trainer.resume_from=saved/conformer_m
 ```bash
 # Evaluate model
 python inference.py -cn=conformer_rnn_t ++datasets.test.dir=path/to/custom_dataset
+```
 
+Test on LibriSpeech datasets:
+```bash
+python inference.py -cn=conformer_rnn_t datasets=librispeech ++datasets.test.part=test-other
 ```
 
 ## Calc metrics
@@ -83,6 +81,29 @@ python calc_metrics.py --predictions ./predictions/dir --dataset_dir ./dataset/d
 
 Metrics: WER, CER
 
+### File structure
+
+Dataset directory should have the following structure:
+```
+dataset_dir/
+├── audio/
+│   ├── utterance1.wav  # can be .flac, .mp3, .m4a, .ogg
+│   ├── utterance2.wav
+│   └── ...
+└── transcriptions/  # ground truth
+    ├── utterance1.txt
+    ├── utterance2.txt
+    └── ...
+```
+
+Predictions directory should contain individual .txt files:
+```
+predictions_dir/
+├── utterance1.txt
+├── utterance2.txt
+└── ...
+```
+
 ## Project Structure
 
 ```
@@ -90,7 +111,7 @@ src/
 ├── configs/           # Configuration files
 ├── datasets/          # Dataset implementations
 ├── logger/            # Experiment tracking
-├── loss/              # Loss functions (CTC, RNN-T)
+├── loss/              # Loss functions (RNN-T)
 ├── metrics/           # Evaluation metrics
 ├── model/             # Model architectures
 ├── text_encoder/      # Text encoding (char, BPE)

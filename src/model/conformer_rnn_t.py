@@ -24,7 +24,7 @@ class ConformerRNNT(nn.Module):
         num_lstm_layers=1,
         lstm_hidden_dim=256,
         lstm_dropout_rate=0.3,
-        max_tokens_per_frame=3,
+        max_tokens_per_frame=5,
     ):
         super().__init__()
 
@@ -57,7 +57,7 @@ class ConformerRNNT(nn.Module):
         self.joint_network = JointNetwork(encoding_dim, n_tokens)
 
     def forward(self, x, text_encoded, spectrogram_length, **kwargs):
-        f, x_lengths = self.conformer(x, spectrogram_length)
+        f, x_lengths = self.conformer(x.transpose(1, 2), spectrogram_length)
         g, _, _ = self.prediction_network(text_encoded)
         logits = self.joint_network(f, g)
         log_probs = F.log_softmax(logits, dim=-1)
@@ -91,52 +91,84 @@ class ConformerRNNT(nn.Module):
 
         return {"result": result}
 
-        # def infer_beam_search(self, x, spectrogram_length, beam_size=10):
-        #     with torch.no_grad():
-        #         encodings, x_lengths = self.conformer(x, spectrogram_length)
+    def infer_beam_search(self, x, spectrogram_length, beam_size=10):
+        result = []
+        with torch.no_grad():
+            encodings, x_lengths = self.conformer(x, spectrogram_length)
 
-        #         for i in range(len(encodings)):
-        #             encoding = encodings[i]
-        #             length = x_lengths[i]
+            for i in range(len(encodings)):
+                encoding = encodings[i]
+                length = x_lengths[i]
 
-        #             # (token, probability)
-        #             b_hypos = [(self.bos_idx, 1.0)]
+                # (probability, last_token, hidden state, cell state)
+                beam_hypos = {"1": (0.0, self.bos_idx, None, None)}
 
-        #             beam_hypos = {}
+                for frame in encoding[:length]:
+                    a_hypos = []
 
-        #             for frame in encoding[:length]:
-        #                 a_hypos = b_hypos
-        #                 b_hypos = []
+                    # create new hypotheses
+                    for hypo_key, hypo in beam_hypos.items():
+                        for _ in range(self.max_tokens_per_frame):
+                            g, h, c = self.prediction_network(hypo[1], hypo[2], hypo[3])
+                            logits = self.joint_network.infer(frame, g)
+                            log_probs = F.log_softmax(logits, dim=-1).squeeze(0, 1)
 
-        #                 while a_hypos:
-        #                     next_token_probs = []
+                            blank_hyp = hypo_key(
+                                hypo[0].logaddexp(log_probs[self.pad_idx]),
+                                hypo[1],
+                                h,
+                                c,
+                            )
+                            a_hypos.append(blank_hyp)
 
-        #                     for hypo in a_hypos:
-        #                         g, h, c = self.prediction_network(hypo, h, c)
-        #                         logits = self.joint_network.infer(frame, g)
-        #                         log_probs = F.log_softmax(logits, dim=-1).squeeze(0, 1)
-        #                         next_token = log_probs.argmax(dim=-1)
-        #                         if next_token == self.vocab_size:
-        #                             break
-        #                         next_token_probs.append(log_probs)
+                            for token_id in torch.topk(
+                                log_probs, beam_size
+                            ).indices:  # optimization, take only top-k probs
+                                if token_id == self.pad_idx:
+                                    continue
+                                new_hypo_key = hypo_key + f" {token_id}"
+                                new_g, new_h, new_c = self.prediction_network(
+                                    hypo[1], hypo[2], hypo[3]
+                                )
+                                logits = self.joint_network.infer(frame, new_g)
+                                new_hypo_prob = hypo[0].logaddexp(log_probs[token_id])
+                                new_hypo_last_token = token_id
+                                new_hypo_hidden_state = h
+                                new_hypo_cell_state = c
 
-        #                         with_blank = hypo[1] + log_probs[-1]
+                                a_hypos.append(
+                                    new_hypo_key,
+                                    (
+                                        new_hypo_prob,
+                                        new_hypo_last_token,
+                                        new_hypo_hidden_state,
+                                        new_hypo_cell_state,
+                                    ),
+                                )
 
-        #                         hypo_key = " ".join([str(token) for token in hypo[0]])
-        #                         if hypo_key not in beam_hypos:
-        #                             beam_hypos[hypo_key] = (hypo[0], with_blank)
+                    # merge and prune hypotheses
+                    for k, v in a_hypos.items():
+                        if k not in beam_hypos:
+                            beam_hypos[k] = v
+                        else:
+                            beam_hypos[k] = beam_hypos[k].logaddexp(v[0])
 
-        #                     for hypo in a_hypos:
-        #                         g, h, c = self.prediction_network(hypo[0], h, c)
-        #                         logits = self.joint_network.infer(frame, g)
-        #                         log_probs = F.log_softmax(logits, dim=-1)
-        #                         next_token = log_probs.argmax(dim=-1)
-        #                         if next_token == self.vocab_size:
-        #                             break
+                    beam_hypos = dict(
+                        sorted(beam_hypos.items(), key=lambda x: x[1][0], reverse=True)[
+                            :beam_size
+                        ]
+                    )
 
-        #             result.append(b_hypos)
+                result.append(
+                    (
+                        int(r)
+                        for r in max(beam_hypos.items(), key=lambda x: x[1][0])[
+                            0
+                        ].split()
+                    )
+                )
 
-        return {"result": result}
+        return {"result_beam": result}
 
     def __str__(self):
         """

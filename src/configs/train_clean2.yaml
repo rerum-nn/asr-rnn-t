@@ -1,37 +1,41 @@
 defaults:
-  - model: conformer_ctc
+  - model: conformer_rnn_t_small
   - writer: cometml
   - metrics: example
   - datasets: train_clean
   - dataloader: dataloader_gpu
   - transforms: transforms
   - _self_
+dataloader:
+  batch_size: 8
 optimizer:
   _target_: torch.optim.AdamW
   lr: 8e-4
-  weight_decay: 1e-6
+  weight_decay: 1e-3
   betas: [0.9, 0.98]
 lr_scheduler:
   _target_: torch.optim.lr_scheduler.OneCycleLR
-  max_lr: 0.001
+  max_lr: 0.0025
   pct_start: 0.10
   steps_per_epoch: ${trainer.epoch_len}
   epochs: ${trainer.n_epochs}
   anneal_strategy: cos
 loss_function:
-  _target_: src.loss.CTCLossWrapper
-  zero_infinity: True
+  _target_: src.loss.RNNTLossWrapper
 text_encoder:
-  _target_: src.text_encoder.CTCTextEncoder
+  _target_: src.text_encoder.RNNTTextEncoder
+writer:
+  run_name: "conformer-rnn-t-small"
 trainer:
-  log_step: 100
-  n_epochs: 100
-  epoch_len: 2000
+  log_step: 2000
+  n_epochs: 40
+  epoch_len: 20000
+  gradient_accumulation_steps: 4
   enable_profiler: False
   device_tensors: ["x", "text_encoded", "spectrogram_length", "text_encoded_length"] # which tensors should be on device (ex. GPU)
-  resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
+  resume_from: 'model_best.pth' # null or path to the checkpoint dir with *.pth and config.yaml
   device: auto # device name or "auto"
-  override: True # if True, will override the previous run with the same name
+  override: False # if True, will override the previous run with the same name
   monitor: "min val_WER_(Argmax)" # "off" or "max/min metric_name", i.e. our goal is to maximize/minimize metric
   save_period: 5 # checkpoint each save_period epochs in addition to the best epoch
   early_stop: ${trainer.n_epochs} # epochs for early stopping

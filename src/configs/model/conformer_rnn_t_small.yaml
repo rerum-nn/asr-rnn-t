@@ -2,7 +2,7 @@ _target_: src.model.conformer_rnn_t.ConformerRNNT
 max_length: 2000
 pad_idx: 0
 bos_idx: 1
-max_tokens_per_frame: 3
+max_tokens_per_frame: 5
 input_dim: 80
 encoding_dim: 256
 conformer_encoder_dim: 256
@@ -11,6 +11,6 @@ conformer_encoder_layers: 4
 conformer_attention_heads: 4
 conformer_conv_kernel_size: 31
 conformer_dropout_rate: 0.1
-num_lstm_layers: 1
+num_lstm_layers: 2
 lstm_hidden_dim: 256
 lstm_dropout_rate: 0.3

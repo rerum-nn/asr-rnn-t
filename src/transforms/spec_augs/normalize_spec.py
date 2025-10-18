@@ -17,4 +17,4 @@ class NormalizeSpec(nn.Module):
         self.std = torch.tensor(params["std"], device=self.device)
 
     def __call__(self, x):
-        return (x - self.mean) / self.std
+        return (x - self.mean[:, None]) / self.std[:, None]

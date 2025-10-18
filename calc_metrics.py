@@ -20,11 +20,10 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 from src.metrics.utils import calc_cer, calc_wer
-from src.text_encoder import CTCTextEncoder
+from src.text_encoder import RNNTTextEncoder
 
 
 def get_utterance_id_from_filename(filename: str) -> str:
-    """Extract utterance ID from filename."""
     return Path(filename).stem
 
 
@@ -107,7 +106,7 @@ def parse_predictions_file(predictions_path: Path) -> Dict[str, str]:
 def calculate_metrics_from_dicts(
     ground_truth: Dict[str, str],
     predictions: Dict[str, str],
-    text_encoder: CTCTextEncoder,
+    text_encoder: RNNTTextEncoder,
 ) -> Tuple[List[float], List[float], float, float, List[str]]:
     common_ids = set(ground_truth.keys()) & set(predictions.keys())
 
@@ -188,7 +187,6 @@ def save_results(
 
 
 def main():
-    """Main function of the script."""
     parser = argparse.ArgumentParser(
         description="Calculate WER and CER metrics",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -226,7 +224,7 @@ Examples:
     args = parser.parse_args()
 
     try:
-        text_encoder = CTCTextEncoder()
+        text_encoder = RNNTTextEncoder()
 
         print(f"Dataset dir: {args.dataset_dir}")
         ground_truth = parse_dataset_directory(args.dataset_dir)

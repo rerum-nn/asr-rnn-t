@@ -1,9 +1,11 @@
 from pathlib import Path
 
+import pandas as pd
 import torch
 from tqdm.auto import tqdm
 
 from src.metrics.tracker import MetricTracker
+from src.metrics.utils import calc_cer, calc_wer
 from src.trainer.base_trainer import BaseTrainer
 
 
@@ -128,12 +130,15 @@ class Inferencer(BaseTrainer):
         batch = self.move_batch_to_device(batch)
         batch = self.transform_batch(batch)  # transform batch on device -- faster
 
-        outputs = self.model(**batch)
+        outputs = self.model.infer(**batch)
         batch.update(outputs)
+
+        outputs_beam = self.model.infer_beam_search(**batch)
+        batch.update(outputs_beam)
 
         if metrics is not None:
             for met in self.metrics["inference"]:
-                metrics.update(met.name, met(**batch))
+                metrics.update(met.name, met.infer(**batch))
 
         # Some saving logic. This is an example
         # Use if you need to save predictions on disk
@@ -157,6 +162,36 @@ class Inferencer(BaseTrainer):
                     f.write(f"{pred_text}")
 
         return batch
+
+    def _log_batch(self, text, result, result_beam, audio_path, **batch):
+        argmax_texts = [self.text_encoder.output_decode(inds) for inds in result]
+        beam_search_texts = [
+            self.text_encoder.output_decode(inds) for inds in result_beam
+        ]
+
+        tuples = list(zip(argmax_texts, result_beam, text, audio_path))
+
+        rows = {}
+        for pred, result_beam, target, audio_path in tuples:
+            target = self.text_encoder.normalize_text(target)
+            wer = calc_wer(target, pred) * 100
+            cer = calc_cer(target, pred) * 100
+            beam_search_wer = calc_wer(target, beam_search_texts) * 100
+            beam_search_cer = calc_cer(target, beam_search_texts) * 100
+
+            rows[Path(audio_path).name] = {
+                "target": target,
+                "argmax_predictions": pred,
+                "beam_search_predictions": result_beam,
+                "argmax_wer": wer,
+                "argmax_cer": cer,
+                "beam_search_wer": beam_search_wer,
+                "beam_search_cer": beam_search_cer,
+            }
+
+        self.writer.add_table(
+            "predictions", pd.DataFrame.from_dict(rows, orient="index")
+        )
 
     def _inference_part(self, part, dataloader):
         """

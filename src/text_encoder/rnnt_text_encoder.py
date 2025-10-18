@@ -2,6 +2,7 @@ import re
 from string import ascii_lowercase
 
 import torch
+import youtokentome as yttm
 
 # TODO add BPE, LM, Beam Search support
 # Note: think about metrics and encoder
@@ -79,3 +80,29 @@ class RNNTTextEncoder:
         text = text.lower()
         text = re.sub(r"[^a-z ]", "", text)
         return text
+
+
+class RNNTTextEncoderBPE(RNNTTextEncoder):
+    def __init__(self, bpe_model_path=None, **kwargs):
+        self.bpe_model = yttm.BPE(bpe_model_path)
+        self.bos_tok = 1
+        self.empty_tok = 0
+
+    def __len__(self):
+        return self.bpe_model.vocab_size()
+
+    def __getitem__(self, item: int):
+        assert type(item) is int
+        return self.bpe_model.id_to_subword(item)
+
+    def encode(self, text):
+        return torch.Tensor(
+            self.bpe_model.encode(text, output_type=yttm.OutputType.ID, bos=True)
+        ).unsqueeze(0)
+
+    def decode(self, inds):
+        if len(inds) == 0:
+            return ""
+        return RNNTTextEncoder.normalize_text(
+            self.bpe_model.decode([int(i) for i in inds])[0]
+        )

@@ -134,8 +134,6 @@ class BaseTrainer:
             writer=self.writer,
         )
 
-        self.report_beam = self.cfg_trainer.get("report_beam", False)
-
         # define checkpoint dir and init everything if required
 
         self.checkpoint_dir = (

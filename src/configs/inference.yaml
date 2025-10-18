@@ -1,15 +1,15 @@
 defaults:
   - model: baseline
-  - metrics: example
+  - metrics: inference
   - datasets: custom_dataset
   - dataloader: example
   - transforms: transforms
   - _self_
 text_encoder:
-  _target_: src.text_encoder.CTCTextEncoder
+  _target_: src.text_encoder.RNNTTextEncoder
 inferencer:
   device_tensors: ["x", "text_encoded", "spectrogram_length", "text_encoded_length"] # which tensors should be on device (ex. GPU)
   device: auto # device name or "auto"
   save_path: "example" # any name here, can be a dataset name
-  seed: 1
-  from_pretrained: "saved/conformer_s_ctc_clean/checkpoint-epoch9.pth" # path to the pretrained model
+  seed: 1337
+  from_pretrained: "saved/conformer-rnn-t-small/model_best.pth" # path to the pretrained model
