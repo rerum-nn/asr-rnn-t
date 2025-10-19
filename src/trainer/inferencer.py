@@ -146,13 +146,13 @@ class Inferencer(BaseTrainer):
         # Some saving logic. This is an example
         # Use if you need to save predictions on disk
 
-        batch_size = len(batch["result_beam"])
+        batch_size = len(batch["result"])
         current_id = batch_idx * batch_size
 
         for i in range(batch_size):
             # clone because of
             # https://github.com/pytorch/pytorch/issues/1995
-            pred_text = self.text_encoder.decode(batch["result_beam"][i])
+            pred_text = self.text_encoder.decode(batch["result"][i])
 
             if self.save_path is not None:
                 with open(
@@ -180,7 +180,7 @@ class Inferencer(BaseTrainer):
             rows[Path(audio_path).name] = {
                 "target": target,
                 "argmax_predictions": pred,
-                "beam_search_predictions": result_beam,
+                "beam_search_predictions": beam_search_pred,
                 "argmax_wer": wer,
                 "argmax_cer": cer,
                 "beam_search_wer": beam_search_wer,
