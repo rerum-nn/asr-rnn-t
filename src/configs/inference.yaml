@@ -13,8 +13,8 @@ writer:
 inferencer:
   device_tensors: ["x", "text_encoded", "spectrogram_length", "text_encoded_length"] # which tensors should be on device (ex. GPU)
   device: auto # device name or "auto"
-  save_path: "example" # any name here, can be a dataset name
+  save_path: "data/saved/example" # any name here, can be a dataset name
   seed: 1337
   from_pretrained: "saved/conformer-rnn-t-small-other/model_best.pth" # path to the pretrained model
-  beam_size: 4
+  beam_size: 2
 dir: "data/datasets/custom_dataset"

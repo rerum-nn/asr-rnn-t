@@ -112,41 +112,49 @@ class ConformerRNNT(nn.Module):
                 encoding = encodings[i]
                 length = x_lengths[i]
 
-                
                 bos_token = torch.tensor(self.bos_idx, device=encoding.device)
-                g, h, c = self.prediction_network(bos_token.unsqueeze(0).unsqueeze(0), None, None)
-                
+                g, h, c = self.prediction_network(
+                    bos_token.unsqueeze(0).unsqueeze(0), None, None
+                )
+
                 # (probability, g, hidden state, cell state, token_count)
-                b_hypos = {
-                    "1": (
-                        torch.tensor(0.0, device=encoding.device),
-                        g,
-                        h,
-                        c,
-                        0
-                    )
-                }
+                b_hypos = {"1": (torch.tensor(0.0, device=encoding.device), g, h, c, 0)}
 
                 for frame in encoding[:length]:
                     a_hypos = b_hypos
                     b_hypos = {}
+                    b_nbest_score = -float("inf")
 
                     for _ in range(self.max_tokens_per_frame):
                         if len(a_hypos) == 0:
                             break
-                        
+
+                        next_hypos = {}
                         for hypo_key, hypo in a_hypos.items():
-                            logits = self.joint_network.infer(frame, hypo[2])
+                            if hypo[0] < b_nbest_score:
+                                continue
+                            # print(hypo_key)
+                            logits = self.joint_network.infer(frame, hypo[1])
                             log_probs = F.log_softmax(logits, dim=-1).squeeze(0, 1)
 
                             # generate blank hypothesis
-                            blank_hyp = (
-                                hypo[0].logaddexp(log_probs[self.pad_idx]),
-                                hypo[1],
-                                hypo[2],
-                                hypo[3],
-                                hypo[4]
-                            )
+                            blank_hyp_prob = hypo[0] + log_probs[self.pad_idx]
+                            if hypo_key in b_hypos:
+                                blank_hyp = (
+                                    b_hypos[hypo_key][0].logaddexp(blank_hyp_prob),
+                                    hypo[1],
+                                    hypo[2],
+                                    hypo[3],
+                                    hypo[4],
+                                )
+                            else:
+                                blank_hyp = (
+                                    blank_hyp_prob,
+                                    hypo[1],
+                                    hypo[2],
+                                    hypo[3],
+                                    hypo[4],
+                                )
 
                             b_hypos[hypo_key] = blank_hyp
 
@@ -164,33 +172,41 @@ class ConformerRNNT(nn.Module):
                                     hypo[2],
                                     hypo[3],
                                 )
-                                logits = self.joint_network.infer(frame, new_g)
-                                log_probs = F.log_softmax(logits, dim=-1).squeeze(0, 1)
 
                                 new_hypo_key = hypo_key + f" {token_id}"
-                                new_hypo_prob = hypo[0].logaddexp(log_probs[token_id])
-                                new_hypo_last_token = token_id
+                                new_hypo_prob = hypo[0] + log_probs[token_id]
 
-                                a_hypos[new_hypo_key] = (
+                                next_hypos[new_hypo_key] = (
                                     new_hypo_prob,
-                                    new_hypo_last_token,
                                     new_g,
                                     new_h,
                                     new_c,
-                                    hypo[4] + 1
+                                    hypo[4] + 1,
                                 )
 
-                    b_hypos = dict(
-                        sorted(b_hypos.items(), key=lambda x: x[1][0] / x[1][4], reverse=True)[
-                            :beam_size
-                        ]
-                    )
+                        next_hypos = dict(
+                            sorted(
+                                next_hypos.items(), key=lambda x: x[1][0], reverse=True
+                            )[:beam_size]
+                        )  # additional optimization
+                        a_hypos = next_hypos
+
+                    b_hypos = sorted(
+                        b_hypos.items(), key=lambda x: x[1][0], reverse=True
+                    )[:beam_size]
+                    if len(b_hypos) < beam_size:
+                        b_nbest_score = -float("inf")
+                    else:
+                        b_nbest_score = b_hypos[-1][1][0]
+                    b_hypos = dict(b_hypos)
 
                 result.append(
-                    (
+                    [
                         int(r)
-                        for r in max(b_hypos.items(), key=lambda x: x[1][0] / x[1][4])[0][1:].split()
-                    )
+                        for r in max(b_hypos.items(), key=lambda x: x[1][0])[0][
+                            2:
+                        ].split()
+                    ]
                 )
 
         return {"result_beam": result}

@@ -2,7 +2,7 @@ _target_: src.model.conformer_rnn_t.ConformerRNNT
 max_length: 2000
 pad_idx: 0
 bos_idx: 1
-max_tokens_per_frame: 5
+max_tokens_per_frame: 4
 input_dim: 80
 encoding_dim: 1024
 conformer_encoder_dim: 256

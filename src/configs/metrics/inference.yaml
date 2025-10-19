@@ -3,7 +3,7 @@ inference:
     name: "CER_(Argmax)"
   - _target_: src.metrics.ArgmaxWERMetric
     name: "WER_(Argmax)"
-  # - _target_: src.metrics.BeamSearchCERMetric
-  #   name: "CER_(BeamSearch)"
-  # - _target_: src.metrics.BeamSearchWERMetric
-  #   name: "WER_(BeamSearch)"
+  - _target_: src.metrics.BeamSearchCERMetric
+    name: "CER_(BeamSearch)"
+  - _target_: src.metrics.BeamSearchWERMetric
+    name: "WER_(BeamSearch)"

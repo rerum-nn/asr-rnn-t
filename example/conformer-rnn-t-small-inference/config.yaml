@@ -1,0 +1,122 @@
+model:
+  _target_: src.model.conformer_rnn_t.ConformerRNNT
+  max_length: 2000
+  pad_idx: 0
+  bos_idx: 1
+  max_tokens_per_frame: 5
+  input_dim: 80
+  encoding_dim: 256
+  conformer_encoder_dim: 256
+  conformer_subsampling_dim: 128
+  conformer_encoder_layers: 4
+  conformer_attention_heads: 4
+  conformer_conv_kernel_size: 31
+  conformer_dropout_rate: 0.1
+  num_lstm_layers: 2
+  lstm_hidden_dim: 256
+  lstm_dropout_rate: 0.3
+metrics:
+  inference:
+  - _target_: src.metrics.ArgmaxCERMetric
+    name: CER_(Argmax)
+  - _target_: src.metrics.ArgmaxWERMetric
+    name: WER_(Argmax)
+  - _target_: src.metrics.BeamSearchCERMetric
+    name: CER_(BeamSearch)
+  - _target_: src.metrics.BeamSearchWERMetric
+    name: WER_(BeamSearch)
+datasets:
+  test:
+    _target_: src.datasets.LibrispeechDataset
+    part: test-other
+    instance_transforms: ${transforms.instance_transforms.inference}
+    limit: 1
+writer:
+  _target_: src.logger.ConsoleWriter
+  project_name: pytorch_asr_conformer_rnnt
+  run_name: conformer-rnn-t-small-inference
+  loss_names:
+  - loss
+  id_length: 8
+  run_id: 8bb8xngr
+dataloader:
+  _target_: torch.utils.data.DataLoader
+  batch_size: 1
+  num_workers: 0
+  pin_memory: true
+transforms:
+  batch_transforms:
+    train:
+      x:
+        _target_: torch.nn.Sequential
+        _args_:
+        - _target_: src.transforms.Logarithm
+        - _target_: src.transforms.NormalizeSpec
+          params_path: normalization_params_clean.json
+        - _target_: src.transforms.FrequencyMasking
+          frequency_mask_param: 27
+          p: 0.8
+        - _target_: src.transforms.TimeMasking
+          time_mask_param: 15
+          p: 0.2
+          masks_number: 10
+    inference:
+      x:
+        _target_: torch.nn.Sequential
+        _args_:
+        - _target_: src.transforms.Logarithm
+        - _target_: src.transforms.NormalizeSpec
+          params_path: normalization_params_clean.json
+  instance_transforms:
+    train:
+      get_spectrogram:
+        _target_: torchaudio.transforms.MelSpectrogram
+        sample_rate: 16000
+        n_fft: 400
+        hop_length: 160
+        n_mels: 80
+      audio:
+        _target_: torchvision.transforms.v2.Compose
+        transforms:
+        - _target_: src.transforms.NormalizeRMS
+          target_rms: 0.1
+        - _target_: src.transforms.GaussianNoise
+          max_std: 0.003
+          p: 0.5
+        - _target_: src.transforms.TimeStretch
+          min_time_stretch: 0.9
+          max_time_stretch: 1.1
+          p: 0.5
+        - _target_: src.transforms.PitchShift
+          min_semitones: -1
+          max_semitones: 1
+          p: 0.5
+        - _target_: src.transforms.Gain
+          min_gain_in_db: -1.2
+          max_gain_in_db: 1.2
+          p: 0.5
+    inference:
+      get_spectrogram:
+        _target_: torchaudio.transforms.MelSpectrogram
+        sample_rate: 16000
+        n_fft: 400
+        hop_length: 160
+        n_mels: 80
+      audio:
+        _target_: torchvision.transforms.v2.Compose
+        transforms:
+        - _target_: src.transforms.NormalizeRMS
+text_encoder:
+  _target_: src.text_encoder.RNNTTextEncoder
+inferencer:
+  device_tensors:
+  - x
+  - text_encoded
+  - spectrogram_length
+  - text_encoded_length
+  device: auto
+  save_path: example
+  seed: 1337
+  from_pretrained: saved/conformer-rnn-t-small-other/model_best.pth
+  beam_size: 1
+dir: data/datasets/custom_dataset

@@ -134,8 +134,10 @@ class Inferencer(BaseTrainer):
         outputs = self.model.infer(**batch)
         batch.update(outputs)
 
-        # outputs_beam = self.model.infer_beam_search(beam_size=self.cfg_trainer.get('beam_size', 4) , **batch)
-        # batch.update(outputs_beam)
+        outputs_beam = self.model.infer_beam_search(
+            beam_size=self.cfg_trainer.get("beam_size", 4), **batch
+        )
+        batch.update(outputs_beam)
 
         if metrics is not None:
             for met in self.metrics["inference"]:
@@ -144,13 +146,13 @@ class Inferencer(BaseTrainer):
         # Some saving logic. This is an example
         # Use if you need to save predictions on disk
 
-        batch_size = len(batch["result"])
+        batch_size = len(batch["result_beam"])
         current_id = batch_idx * batch_size
 
         for i in range(batch_size):
             # clone because of
             # https://github.com/pytorch/pytorch/issues/1995
-            pred_text = self.text_encoder.decode(batch["result"][i])
+            pred_text = self.text_encoder.decode(batch["result_beam"][i])
 
             if self.save_path is not None:
                 with open(
@@ -161,30 +163,28 @@ class Inferencer(BaseTrainer):
 
         return batch
 
-    def _log_batch(self, text, result, audio_path, **batch):
+    def _log_batch(self, text, result, result_beam, audio_path, **batch):
         argmax_texts = [self.text_encoder.decode(inds) for inds in result]
-        # beam_search_texts = [
-        #     self.text_encoder.decode(inds) for inds in result_beam
-        # ]
+        beam_search_texts = [self.text_encoder.decode(inds) for inds in result_beam]
 
-        tuples = list(zip(argmax_texts, text, audio_path))
+        tuples = list(zip(argmax_texts, text, beam_search_texts, audio_path))
 
         rows = {}
-        for pred, target, audio_path in tuples:
+        for pred, target, beam_search_pred, audio_path in tuples:
             target = self.text_encoder.normalize_text(target)
             wer = calc_wer(target, pred) * 100
             cer = calc_cer(target, pred) * 100
-            # beam_search_wer = calc_wer(target, result_beam) * 100
-            # beam_search_cer = calc_cer(target, result_beam) * 100
+            beam_search_wer = calc_wer(target, beam_search_pred) * 100
+            beam_search_cer = calc_cer(target, beam_search_pred) * 100
 
             rows[Path(audio_path).name] = {
                 "target": target,
                 "argmax_predictions": pred,
-                # "beam_search_predictions": result_beam,
+                "beam_search_predictions": result_beam,
                 "argmax_wer": wer,
                 "argmax_cer": cer,
-                # "beam_search_wer": beam_search_wer,
-                # "beam_search_cer": beam_search_cer,
+                "beam_search_wer": beam_search_wer,
+                "beam_search_cer": beam_search_cer,
             }
 
         self.writer.add_table(
