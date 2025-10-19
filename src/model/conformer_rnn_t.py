@@ -112,91 +112,76 @@ class ConformerRNNT(nn.Module):
                 encoding = encodings[i]
                 length = x_lengths[i]
 
-                # (probability, last_token, hidden state, cell state)
+                
                 bos_token = torch.tensor(self.bos_idx, device=encoding.device)
-                beam_hypos = {
+                g, h, c = self.prediction_network(bos_token.unsqueeze(0).unsqueeze(0), None, None)
+                
+                # (probability, g, hidden state, cell state, token_count)
+                b_hypos = {
                     "1": (
                         torch.tensor(0.0, device=encoding.device),
-                        bos_token,
-                        None,
-                        None,
-                        0,
+                        g,
+                        h,
+                        c,
+                        0
                     )
                 }
 
                 for frame in encoding[:length]:
-                    a_hypos = []
+                    a_hypos = b_hypos
+                    b_hypos = {}
 
-                    # create new hypotheses
-                    for hypo_key, hypo in beam_hypos.items():
-                        g, h, c = self.prediction_network(
-                            hypo[1].unsqueeze(0).unsqueeze(0), hypo[2], hypo[3]
-                        )
-                        logits = self.joint_network.infer(frame, g)
-                        log_probs = F.log_softmax(logits, dim=-1).squeeze(0, 1)
+                    for _ in range(self.max_tokens_per_frame):
+                        if len(a_hypos) == 0:
+                            break
+                        
+                        for hypo_key, hypo in a_hypos.items():
+                            logits = self.joint_network.infer(frame, hypo[2])
+                            log_probs = F.log_softmax(logits, dim=-1).squeeze(0, 1)
 
-                        blank_hyp = (
-                            hypo_key,
-                            (
+                            # generate blank hypothesis
+                            blank_hyp = (
                                 hypo[0].logaddexp(log_probs[self.pad_idx]),
                                 hypo[1],
                                 hypo[2],
                                 hypo[3],
-                                0,
-                            ),
-                        )
-                        a_hypos.append(blank_hyp)
-
-                        if hypo[4] > self.max_tokens_per_frame:
-                            continue
-
-                        for token_id in torch.topk(
-                            log_probs, beam_size
-                        ).indices:  # optimization, take only top-k probs
-                            if token_id.item() == self.pad_idx:
-                                continue
-                            new_hypo_key = hypo_key + f" {token_id}"
-                            new_g, new_h, new_c = self.prediction_network(
-                                torch.tensor(token_id.item(), device=frame.device)
-                                .unsqueeze(0)
-                                .unsqueeze(0),
-                                h,
-                                c,
+                                hypo[4]
                             )
-                            logits = self.joint_network.infer(frame, new_g)
-                            new_hypo_prob = hypo[0].logaddexp(log_probs[token_id])
-                            new_hypo_last_token = token_id
-                            # new_hypo_hidden_state = new_h
-                            # new_hypo_cell_state = new_c
 
-                            a_hypos.append(
-                                (
-                                    new_hypo_key,
-                                    (
-                                        new_hypo_prob,
-                                        new_hypo_last_token,
-                                        h,
-                                        c,
-                                        hypo[4] + 1,
-                                    ),
+                            b_hypos[hypo_key] = blank_hyp
+
+                            # generate new hypotheses
+                            for token_id in torch.topk(
+                                log_probs, beam_size
+                            ).indices:  # optimization, take only top-k probs
+                                if token_id.item() == self.pad_idx:
+                                    continue
+
+                                new_g, new_h, new_c = self.prediction_network(
+                                    torch.tensor(token_id.item(), device=frame.device)
+                                    .unsqueeze(0)
+                                    .unsqueeze(0),
+                                    hypo[2],
+                                    hypo[3],
                                 )
-                            )
+                                logits = self.joint_network.infer(frame, new_g)
+                                log_probs = F.log_softmax(logits, dim=-1).squeeze(0, 1)
 
-                    # merge and prune hypotheses
-                    for k, v in a_hypos:
-                        if k not in beam_hypos:
-                            beam_hypos[k] = (v[0], v[1], v[2], v[3], v[4])
-                        else:
-                            beam_hypos[k] = (
-                                beam_hypos[k][0].logaddexp(v[0]),
-                                beam_hypos[k][1],
-                                beam_hypos[k][2],
-                                beam_hypos[k][3],
-                                beam_hypos[k][4],
-                            )
+                                new_hypo_key = hypo_key + f" {token_id}"
+                                new_hypo_prob = hypo[0].logaddexp(log_probs[token_id])
+                                new_hypo_last_token = token_id
 
-                    beam_hypos = dict(
-                        sorted(beam_hypos.items(), key=lambda x: x[1][0], reverse=True)[
+                                a_hypos[new_hypo_key] = (
+                                    new_hypo_prob,
+                                    new_hypo_last_token,
+                                    new_g,
+                                    new_h,
+                                    new_c,
+                                    hypo[4] + 1
+                                )
+
+                    b_hypos = dict(
+                        sorted(b_hypos.items(), key=lambda x: x[1][0] / x[1][4], reverse=True)[
                             :beam_size
                         ]
                     )
@@ -204,9 +189,7 @@ class ConformerRNNT(nn.Module):
                 result.append(
                     (
                         int(r)
-                        for r in max(beam_hypos.items(), key=lambda x: x[1][0])[
-                            0
-                        ].split()
+                        for r in max(b_hypos.items(), key=lambda x: x[1][0] / x[1][4])[0][1:].split()
                     )
                 )
 
